@@ -27,7 +27,7 @@ javascript:(async()%3D%3E%7Bconst%20a%3Dnew%20TextDecoder%3Bfunction%20e(e)%7Bco
 * 여러 줄 입력시 공앱 퀵쓰기처럼 사용 가능합니다.
 * 제목에도 디시콘을 사용할 수 있습니다.
 
-### 버그 제보 및 문의
+### 버그 제보
 * [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
 ## 주의사항
