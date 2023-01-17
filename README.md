@@ -38,7 +38,6 @@ javascript:(async()%3D%3E%7Blet%20l%3Dnew%20TextDecoder%3Bfunction%20e(e)%7Blet%
 * 이 북마크렛은 공식 앱이 아니며 사용 중 일어나는 모든 책임은 사용자 본인에게 있습니다.
 
 ## Changelog
-```
 v 1.3.0-20230117
 * 미니 갤러리 지원
 * captcha 지원
@@ -87,4 +86,3 @@ v 1.0.1-20230113b
 
 v 1.0.0-20230113
 * 첫 공개 버전
-```
