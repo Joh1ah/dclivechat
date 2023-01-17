@@ -28,14 +28,14 @@ javascript:(async()%3D%3E%7Blet%20o%3Dnew%20TextDecoder%3Bfunction%20e(e)%7Blet%
 * 여러 줄 입력시 공앱 퀵쓰기처럼 사용 가능합니다.
 * 제목에도 디시콘을 사용할 수 있습니다.
 
-### 버그 제보
-* [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
-
 ## 주의사항
 * 글이나 댓글의 삭제 및 수정은 불가능합니다.
 * 사용 도중 로그인은 불가능합니다. 로그인 후에 실행시켜주세요.
 * 버전은 자동 업데이트되지 않습니다.
 * 이 북마크렛은 공식 앱이 아니며 사용 중 일어나는 모든 책임은 사용자 본인에게 있습니다.
+
+### 버그 제보
+* [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
 ## Changelog
 v 1.4.0-20230118
