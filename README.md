@@ -40,6 +40,9 @@ javascript:(async()%3D%3E%7Bconst%20a%3Dnew%20TextDecoder%3Bfunction%20t(t)%7Bco
 
 ## Changelog
 ```
+v 1.2.2-20230116b
+* 자잘한 버그 수정
+
 v 1.2.2-20230116
 * 여러 창을 열고 닫을 때 전에 닫았던 글이 전부 열리는 문제 수정
 * 글 제목 클릭시 글이 열리도록 수정
