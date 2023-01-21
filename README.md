@@ -13,8 +13,8 @@ javascript:eval(atob('KGFzeW5jKCk9PntTdHJpbmcucHJvdG90eXBlLnI9ZnVuY3Rpb24oZSx0KX
 3. 이 북마크를 누르면 DC 라이브챗이 실행됩니다.
 
 ## 주요 기능
-![DC 라이브챗](https://github.com/Joh1ah/dclivechat/blob/main/screenshot_3.gif)
-![DC 라이브챗](https://github.com/Joh1ah/dclivechat/blob/main/screenshot_0.gif)
+![DC 라이브챗 스크린샷](https://github.com/Joh1ah/dclivechat/blob/main/screenshot_3.gif)
+![DC 라이브챗 스크린샷](https://github.com/Joh1ah/dclivechat/blob/main/screenshot_0.gif)
 * 글과 댓글이 실시간으로 올라옵니다.
 * 글 내용과 댓글을 읽고 쓸 수 있습니다.
 * 한쪽에 원하는 방송/영상을 원하는 만큼 띄울 수 있습니다. (설정에서 on/off 가능)
@@ -36,6 +36,9 @@ javascript:eval(atob('KGFzeW5jKCk9PntTdHJpbmcucHJvdG90eXBlLnI9ZnVuY3Rpb24oZSx0KX
 * [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
 ## Changelog
+v 1.5.2-20230121
+* 모바일에서 댓글수가 제대로 보이지 않던 문제 수정
+
 v 1.5.1-20230121
 * 글 본문 닫을 시 내부 영상이 멈추도록 수정
 * 일부 디시콘이 보이지 않던 문제 수정
