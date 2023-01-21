@@ -1157,7 +1157,7 @@ $inputHeight: 100px;
 .nc { // v 1.1.1-20230114b
     display: grid;
     grid-template-columns: .6em .6em .6em;
-    height: 1em;
+    height: 1em !important;
     overflow: hidden;
     position: relative;
     >div{
@@ -1168,10 +1168,10 @@ $inputHeight: 100px;
         position: absolute;
         >span {
             grid-column: 1;
-            height: 1em;
+            height: 100%;
             max-width: 1em;
             padding: 0;
-            line-height: 1.5em;
+            line-height: 1.2em !important;
         }
         >.old {
             grid-row: 1;

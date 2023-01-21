@@ -1,6 +1,6 @@
 /** 
  * DC 라이브챗 by Joh1ah (좋1아)
- * 해당 버전: 1.5.1-20230121
+ * 해당 버전: 1.5.2-20230121
  * git: https://github.com/Joh1ah/dclivechat
  */
 (async() => {
