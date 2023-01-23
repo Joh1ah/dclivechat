@@ -238,6 +238,9 @@ let str_relocateDone = decode('67Cw7LmYIOyZhOujjCE.');
 // let str_drag = decode('65Oc656Y6re4');
 /** "모바일 환경에서는 권장하지 않습니다.\n그래도 사용하시겠습니까?" */
 let str_askMado = decode('66qo67CU7J28IO2ZmOqyveyXkOyEnOuKlCDqtozsnqXtlZjsp4Ag7JWK7Iq164uI64ukLgrqt7jrnpjrj4Qg7IKs7Jqp7ZWY7Iuc6rKg7Iq164uI6rmMPw..');
+/** "전체 닫기" */
+let str_closeAll = decode('7KCE7LK0IOuLq-q4sA..');
+
 
 //#endregion
 
@@ -281,7 +284,8 @@ let divString = 'div';
 let spanString = 'span';
 
 // captcha
-let grecaptcha = 'g-recaptcha-response';
+let grecaptchaToken = 'g-recaptcha-token';
+let grecaptchaResponse = 'g-recaptcha-response';
 let grecaptchaBlock = '6Lc-Fr0UAAAAAOdqLYqPy53MxlRMIXpNXFvBliwI';
 
 // 자주쓰는 웹폰트 아이콘
@@ -480,10 +484,30 @@ let cutIpAddress = (address) => {
 };
 let setStyleVariable = (propertyName, value) => doc.documentElement.style.setProperty(propertyName, value);
 
-let executeCaptcha = (action) => {
+// grecaptcha v3
+let initCaptchaV3 = async () => {
     let { r, p } = initPromise();
-    grecaptcha.ready(() => grecaptcha.execute(grecaptchaBlock, {action: action}).then(token => r(token)).catch(e => debug(e), r('')));
-    return p;
+    createElement('script', body, {
+        onload: () => {
+            if (typeof grecaptcha == 'undefined') return debug('recaptcha is undefined');
+            else debug('recaptcha v3 loaded');
+            r();
+        },
+        type: 'text/javascript',
+        src: https + 'www.google.com/recaptcha/api.js?render=' + grecaptchaBlock,
+    });
+    return await p;
+}
+let executeCaptchaV3 = async (action) => {
+    if (typeof grecaptcha == 'undefined') await initCaptchaV3();
+    let { r, p } = initPromise();
+    grecaptcha.ready(() => grecaptcha.execute(grecaptchaBlock, {action: action}).then(r).catch(e => {debug(e); r('');}));
+    return await p;
+};
+
+let executeCaptcha = async (version, data, action) => {
+    if (version == 'v3') return data[grecaptchaToken] = await executeCaptchaV3(action);
+    debug('recaptcha', version, 'is not supported');
 };
 
 let bytesKb = 1024;
@@ -883,7 +907,7 @@ let insertDccon = async (code) => {
         t_vch2_chk: undefined,
         c_gall_id: gallId,
         c_gall_no: undefined,
-        [grecaptcha]: '',
+        [grecaptchaResponse]: '',
         check_6: undefined,
         check_7: undefined,
         check_8: undefined,
@@ -892,8 +916,8 @@ let insertDccon = async (code) => {
     let res = await postWrite(dcconInsertIcon, data);
     if (res) {
         let splits = res.split('||');
-        if (splits.length > 2 && splits[2] == 'v3') {
-            data[grecaptcha] = await executeCaptcha('insert_icon');
+        if (splits.length > 2 && splits[1] == 'captcha') {
+            await executeCaptcha(splits[2], data, 'insert_icon');
             await postWrite(dcconInsertIcon, data);
         }
     }
@@ -918,7 +942,7 @@ let insertDcconComment = async (code, num) => {
         t_vch2_chk: commentFormData.t_vch2_chk,
         c_gall_id: gallId,
         c_gall_no: num,
-        [grecaptcha]: '',
+        [grecaptchaResponse]: '',
         check_6: commentFormData.check_6,
         check_7: commentFormData.check_7,
         check_8: commentFormData.check_8,
@@ -958,19 +982,19 @@ let neutralizeDccon = (string) => {
         .r(/onmousedown="[^"]+"/, '')
         .r(/onerror="[^"]+"/, `onerror="document.${onerrorFuncName}(this.parentNode)"`) // 
         .r(/class="written_dccon"/g, 'class="d"') ;
-}
+};
 doc[onerrorFuncName] = (videoElement) => {
     let src = videoElement.getAttribute('data-src');
     videoElement.insertAdjacentElement('beforebegin', createElement('img', null, { src: src }, 'd'));
     addClass(videoElement, hidden);
-}
+};
 
 //#endregion
 
 //#region 기타 함수
 
 // 하이퍼링크를 앱에서 열리는 링크로 대체
-let onclickFunc = (encoded) => 'onclick="document.' + openLinkFuncName + '(\'' + encoded + '\')"';
+let onclickFunc = (encoded) => `onclick="window.postMessage(JSON.stringify({type:'${openLinkFuncName}',url:'${encoded}' }),'*')"`;
 let _replaceLink = (string, regex) => {
     let matches = string.match(regex);
     if (matches) {
@@ -1135,20 +1159,17 @@ let stylesheet = STYLESHEET // defined when building
     .r(/_B/g, 'bottom')
     .r(/_L/g, 'left')
     .r(/_R/g, 'right')
+    .r(/_r/g, 'relative')
+    .r(/_a/g, 'absolute')
+    .r(/_o/g, 'overflow')
+    .r(/_f/g, 'flex')
+    .r(/_F/g, 'font')
+    .r(/_j/g, 'justify-content')
+    .r(/_g/g, 'grid-')
 createElement('style', head, { [innerText]: stylesheet });
 createElement('link', head, {
     rel: 'stylesheet',
     href: https + 'fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'
-});
-
-// load grecaptcha
-createElement('script', body, {
-    onload: () => {
-        if (grecaptcha == undefined) return debug('no captcha');
-        else debug('captcha loaded');
-    },
-    type: 'text/javascript',
-    src: https + 'www.google.com/recaptcha/api.js?render=' + grecaptchaBlock,
 });
 
 //#endregion
@@ -1281,6 +1302,10 @@ relocateVideoButton.onclick = () => {
     }
 };
 
+let closeAllVideosButton = createElement('a', menu, 'b', disabled);
+createIcon(closeAllVideosButton, 'close');
+createElement(spanString, closeAllVideosButton, { [innerText]: str_closeAll });
+
 let videoInputContainer = createElement(divString, videoMain, 'p.fr');
 let videoInputCloseButton = createElement('a', videoInputContainer, {
     [onclick]: () => {
@@ -1315,14 +1340,17 @@ let renderRow = () => {
         if (relocating) relocateVideoButton.click();
     } else setStyleVariable('--mh', '50px');
     addClass(relocateVideoButton, disabled);
+    
     removeClass(relocateVideoButton, '.t');
     removeClass(videoMain, 'go');
     if (!videoDivs.length) {
         if (relocating) relocateVideoButton.click();
+        addClass(closeAllVideosButton, disabled);
         addClass(videoInputCloseButton, hidden);
         removeClass(videoInputContainer, hidden);
         return;
     }
+    removeClass(closeAllVideosButton, disabled);
     removeClass(relocateVideoButton, disabled);
     removeClass(videoInputCloseButton, hidden);
     addClass(videoInputContainer, hidden);
@@ -1373,7 +1401,8 @@ let addVideo = (url) => {
 
 // 글 본문에 링크가 있다면
 // 영상 화면에 표시하는 전역 함수를 추가
-doc[openLinkFuncName] = (string) => {
+let openLink = (string) => {
+// doc[openLinkFuncName] = (string) => {
     let decoded = decodeURIComponent(string).r(/&amp;/g, '&');
     openModal({
         title: str_openUrlTitle,
@@ -1397,12 +1426,24 @@ doc[openLinkFuncName] = (string) => {
         close: true,
     });
 };
+onmessage = (ev) => {
+    let json = JSON.parse(ev.data);
+    if (json && json.type == openLinkFuncName) openLink(json.url);
+}
 
 let removeVideoPlayer = (url, videoDiv) => {
     splice(loadedVideoUrls, url);
     splice(videoDivs, videoDiv);
     saveOptions();
     videoDiv.remove();
+    renderRow();
+}
+
+let clearVideoPlayers = () => {
+    loadedVideoUrls.length = 0;
+    for (let videoDiv of videoDivs) videoDiv.remove();
+    videoDivs.length = 0;
+    saveOptions();
     renderRow();
 }
 
@@ -1510,6 +1551,8 @@ let addVideoIframe = (url, options = null) => {
 onApplyFunc['videos-' + gallId] = (videos) => {
     for (let url of videos) if (!loadedVideoUrls.includes(url)) _addVideo(url);
 }
+
+closeAllVideosButton[onclick] = clearVideoPlayers;
 
 //#endregion
 
@@ -2996,11 +3039,8 @@ let writePost = async (title, content) => {
     let res = await postWrite(articleSubmit, formData, additionalFormData, lastData).catch(debug);
     if (res) {
         let splits = res.split('||');
-        if (splits.length == 3 && splits[2] == 'v3') {
-            //captcha
-            let token = await executeCaptcha('comment_submit');
-            if (!token) return falseString('captcha');
-            lastData['g-recaptcha-token'] = token;
+        if (splits.length > 2 && splits[1] == 'captcha') {
+            await executeCaptcha(splits[2], lastData, 'comment_submit');
             return await postWrite(articleSubmit, formData, additionalFormData, lastData).catch(debug);
         }
     }
@@ -3084,15 +3124,15 @@ let writeComment = async (num, body, target = 0) => {
         no: num,
         c_gall_id: gallId,
         c_gall_no: num,
-        [grecaptcha]: '',
+        [grecaptchaResponse]: '',
         _GALLTYPE_: gallType,
         headTail: '""',
     };
     let res = await postComment(num, commentSubmit, data, commentFormData, additionalFormData).catch(debug);
     if (!res) return falseString(stR_error_badRequest);
     let splits = res.split('||');
-    if (splits.length > 2 && splits[2] == 'v3') {
-        data[grecaptcha] = await executeCaptcha('comment_submit');
+    if (splits.length > 2 && splits[1] == 'captcha') {
+        await executeCaptcha(splits[2], data, 'comment_submit');
         res = await postComment(num, commentSubmit, data, commentFormData, additionalFormData).catch(debug);
     }
     try {
