@@ -1107,8 +1107,7 @@ $inputHeight: 100px;
 }
 
 // ######################## RESPONSIVE ##############
-
-@media ((max-aspect-ratio: 3/4) or (max-width: 700px)) {
+@media (max-aspect-ratio: 3/4) or (max-width: 700px) {
     main {
         flex-direction: column;
         align-items: flex-start;

@@ -252,6 +252,7 @@ let head = doc.head;
 let storage = localStorage ?? null;
 
 let bMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+let bMobileSafari = bMobileDevice && /Safari/i.test(navigator.userAgent);
 
 let intervalPresets = [ 4000, 2500 ];
 let minInterval = 2000; 
@@ -1062,12 +1063,12 @@ let validateLocation = (url) => {
         bMini = /^mini/.test(match[2]);
     } else {
         bMobile = true;
-        idMatch = match[2].match(/^board\/([A-Za-z0-9_]+)($|\?|\/|#)/);
+        idMatch = match[2].match(/(board|mini)\/([A-Za-z0-9_]+)($|\?|\/|#)/);
         bMinor = (doc[getElementsByClassName]('micon').length > 0);
         bMini = (doc[getElementsByClassName]('mnicon').length > 0)
     }
     if (!idMatch || !idMatch.length) return onInvalidPage(str_noGalleryPageUrl);
-    gallId = idMatch[1];
+    gallId = bMobile ? idMatch[2] : idMatch[1];
     return 1;
 }
 if (!validateLocation(location.href)) return;
@@ -1167,6 +1168,13 @@ let stylesheet = STYLESHEET // defined when building
     .r(/_F/g, 'font')
     .r(/_j/g, 'justify-content')
     .r(/_g/g, 'grid-')
+    .r(/_c/g, 'calc')
+    .r(/_x/g, '100%')
+if (bMobileSafari) {
+    stylesheet = stylesheet.r(/_s/g, '');
+} else {
+    stylesheet = stylesheet.r(/_s/g, ' or (max-width:700px)');
+}
 createElement('style', head, { [innerText]: stylesheet });
 createElement('link', head, {
     rel: 'stylesheet',
@@ -1449,7 +1457,7 @@ let clearVideoPlayers = () => {
 }
 
 let addVideoTwitch = (id) => {
-    let src = https + 'player.twitch.tv/?channel=' + id + '&parent=' + (bMobile ? 'm' : 'gall') + '.dcinside.com';
+    let src = https + 'player.twitch.tv/?channel=' + id + '&parent=gall.dcinside.com';
     addVideoIframe(src);
 };
 let addVideoYoutube = (id, t = 0) => {
