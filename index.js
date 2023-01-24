@@ -1,6 +1,6 @@
 /** 
  * DC 라이브챗 by Joh1ah (좋1아)
- * 해당 버전: 1.5.2-20230121
+ * 해당 버전: 1.5.4-20230124
  * git: https://github.com/Joh1ah/dclivechat
  */
 (async() => {
@@ -268,6 +268,7 @@ let getElementsByName = 'getElementsByName';
 let getElementsByTagName = 'getElementsByTagName';
 let querySelector = 'querySelector';
 let innerText = 'innerText';
+let placeholder = 'placeholder';
 let onclick = 'onclick';
 
 // document에 할당하여 실행할 전역 함수 이름
@@ -1315,7 +1316,7 @@ let videoInputCloseButton = createElement('a', videoInputContainer, {
 createIcon(videoInputCloseButton, 'close');
 
 let videoInput = createElement('textarea', videoInputContainer, {
-    placeholder: str_placeholderVideo,
+    [placeholder]: str_placeholderVideo,
 }, 'src');
 let videoSubmit = createElement('a', videoInputContainer, {
     // [innerText]: str_comfirm,
@@ -2062,12 +2063,12 @@ toggleExpander = () => {
     pullDown(true);
 }
 let loginInputContainer = createElement(divString, loginInfoContainer, 'fr', hidden);
-let inputNickname = createElement('input', loginInputContainer, { type:'text', placeholder: str_nickname, maxlength: 15, name: 'name' });
-let inputPassword = createElement('input', loginInputContainer, { type:'password', placeholder: str_password, maxlength: 20, name: 'password' });
+let inputNickname = createElement('input', loginInputContainer, { type:'text', [placeholder]: str_nickname, maxlength: 15, name: 'name' });
+let inputPassword = createElement('input', loginInputContainer, { type:'password', [placeholder]: str_password, maxlength: 20, name: 'password' });
 let captchaInputContainer = createElement(divString, loginInfoContainer, 'fr', hidden);
 let captchaImageContainer = createElement('a', captchaInputContainer);
 let captchaImage = createElement('img', captchaImageContainer, { [onclick]: () => renderInputCaptcha() }, 'captcha');
-let inputCaptcha = createElement('input', captchaInputContainer, { type:'text', placeholder: str_code, maxlength: 20 });
+let inputCaptcha = createElement('input', captchaInputContainer, { type:'text', [placeholder]: str_code, maxlength: 20 });
 
 // 미니갤: 익명 게시판인 경우
 let renderInputNickname = () => {
@@ -2104,7 +2105,7 @@ let renderInputCaptcha = async () => {
 let refreshWriteSession;
 
 onLoginChecked = () => {
-    if (!bLogin) {
+    if (!bLogin && !getOption(str_settings_hideLogin)) {
         removeClass(loginInputContainer, hidden);
         removeClass(loginInputExpander, hidden);
         pullDown(true);
@@ -2144,19 +2145,20 @@ if (DEBUG) debug('input chat');
 
 let chatInputContainer = createElement(divString, chatContainer, 'ci-c');
 let chatInputContainerFloat = createElement(divString, chatInputContainer, 'f');
-let inputContainer = createElement(divString, chatInputContainerFloat, 'input');
+let inputContainer = createElement(divString, chatInputContainerFloat, 'i');
 
 // 채팅 입력란에 입력이 주어지면 높이를 다시 계산
 let inputHeightName = '--ih';
 let input = createElement('textarea', inputContainer, {
-    placeholder: str_placeholderMessage,
+    [placeholder]: str_placeholderMessage,
     oninput: () => {
         setStyleVariable(inputHeightName, (input.clientHeight + 12) + 'px');
         input.style.height = 0;
         input.style.height = (input.scrollHeight - 19) + 'px';
         pullDown(true);
         request(() => setStyleVariable(inputHeightName, 0))
-    }
+    },
+    onblur: scrollToTop
 }, disabled);
 
 // 글 <-> 댓글 <-> 답글
@@ -2187,7 +2189,7 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
             addClass(submit, disabled);
             if (!bLogin) addClass(loginInfoContainer, hidden);
         }
-        input.placeholder = str_placeholderMessage;
+        input[placeholder] = str_placeholderMessage;
         lastTargetDiv = null;
         lastTargetButtonSpan = null;
         lastTargetComment = null;
@@ -2204,7 +2206,7 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
         if (tComment && tCommentNum) {
             addClass(tComment, 'rp');
             addClass(tDiv, 'rp');
-            input.placeholder = str_placeholderReply;
+            input[placeholder] = str_placeholderReply;
             replyingNameSpan[innerText] = tCommentWriter;
             if (tCommentWriter != targetCommentWriter2) {
                 replyingTypeNameSpan[innerText] = targetCommentWriter2;
@@ -2216,7 +2218,7 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
         } else {
             let postData = postContentDatas[num];
             replyingNameSpan[innerText] = postData.name;
-            input.placeholder = str_placeholderComment;
+            input[placeholder] = str_placeholderComment;
             replyingToSpan[innerText] = str_commentTo;
             tButton[innerText] = str_writeNewComment;
         }

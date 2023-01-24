@@ -803,7 +803,7 @@ main.co {
         height: calc(100vh - var(--mb)) ;
         top: 0;
     }
-    .f>.input>textarea {
+    .f>.i>textarea {
         width: calc(100vw - 100px);
     }
 }
@@ -945,7 +945,7 @@ $inputHeight: 100px;
 
 .f {
     position: relative;
-    >.input {
+    >.i {
         min-height: var(--ih);
         textarea {
             margin: 4px 0;
@@ -1145,7 +1145,7 @@ $inputHeight: 100px;
         margin-right: 0px;
         align-self: center;
     }
-    .f>.input {
+    .f>.i {
         >textarea {
             width: calc(100vw - 200px) !important;
         }
