@@ -39,7 +39,6 @@ javascript:eval(atob('KGFzeW5jKCk9PntTdHJpbmcucHJvdG90eXBlLnI9ZnVuY3Rpb24oZSx0KX
 ## FAQ
 ### <i>실행이 되지 않아요</i>
 * URL란이 제대로 수정되었는지 확인해보세요.<br>만약 수정한 URL이 저장되지 않았다면, 북마크렛 기능을 지원하지 않는 브라우저일 수 있습니다.
-* 팝업 차단을 풀어주세요.
 * 그래도 해결되지 않을 때에는 [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)에 제보해주세요.
 ### <i>방송이 보이지 않아요</i>
 * 타 사이트에서의 시청이 금지된 영상은 볼 수 없습니다. (유튜브 멤버십 한정 방송 등)<br>단, 영상 링크는 정상적으로 추가됩니다.
