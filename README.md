@@ -49,7 +49,6 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 <br>
 
 ## 주의사항
-* 버전은 자동 업데이트되지 않습니다.
 * 이 프로젝트는 공식이 아니며 사용 중 일어나는 모든 문제의 책임은 사용자에게 있습니다.
 
 <br>
