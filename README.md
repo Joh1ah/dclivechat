@@ -56,7 +56,7 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 
 ## Changelog
 v 2.0.1-20230125
-* 
+* 앱이 정상적으로 로드되지 않았을 때의 예외 처리 추가
 
 v 2.0.0-20230125
 * javascript 코드를 웹에서 로드하도록 변경
