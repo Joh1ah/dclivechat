@@ -3,7 +3,7 @@
 디시인사이드를 실시간 채팅창으로 바꿔주는 북마크렛입니다.
 [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.0.0-20230125`
+최신 버전: `2.0.1-20230125`
 
 <br>
 
@@ -11,7 +11,7 @@
 1. PC 또는 모바일 브라우저에 아무 북마크나 추가하세요.
 2. 북마크 URL란에 아래 코드를 복사해 넣으세요.
 ```javascript
-javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>res.text().then(text=>eval(text)))})()
+javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>res.text().then(text=>eval(text))).catch(()=>alert('디시인사이드에서 다시 시도해주세요.'))})();
 ```
 3. 이제 이 북마크를 누르면 DC 라이브챗이 실행됩니다.
 
@@ -49,12 +49,14 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 <br>
 
 ## 주의사항
-* 버전은 자동 업데이트되지 않습니다.
 * 이 프로젝트는 공식이 아니며 사용 중 일어나는 모든 문제의 책임은 사용자에게 있습니다.
 
 <br>
 
 ## Changelog
+v 2.0.1-20230125
+* 앱이 정상적으로 로드되지 않았을 때의 예외 처리 추가
+
 v 2.0.0-20230125
 * javascript 코드를 웹에서 로드하도록 변경
 
