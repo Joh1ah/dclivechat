@@ -1,8 +1,3 @@
-// $colorBackgroundDark: #0d0d0e;
-// $colorBackground: #1b1b1d;
-// $colorBackgroundLight: #333;
-// $colorForegroundDark: #a5a5a5;
-// $colorForeground: white;
 $colorShadow: var(--cs);
 $colorBackgroundDarker: var(--cbdr);
 $colorBackgroundDark: rgb(var(--cbd));
@@ -144,9 +139,11 @@ a, span {
     z-index: 3;
     pointer-events: none;
     opacity: 0;
+    animation: fade-out .2s;
     background: transparent;
     transition: background-color .1s;
     &.wait, &.drag {
+        animation: fade-in .2s;
         opacity: 1;
         pointer-events: initial;
         background: $colorBackgroundDark80;
@@ -166,6 +163,7 @@ a, span {
     background: $colorBackground;
     padding: 20px 30px;
     min-width: 200px;
+    animation: fade-in-grow .2s;
     >.tt {
         font-weight: bold;
         padding: 1em 40px;
@@ -181,9 +179,22 @@ a, span {
     }
 }
 
+.ipvs {
+    width: 100vw;
+    height: 100vh;
+    margin-bottom: var(--mb);
+    >.ipv {
+        animation: fade-in-grow .2s;
+        max-height: calc(90vh - 30px);
+        max-width: 90vw;
+        &.fo {
+            animation: fade-out-shrink .2s;
+        }
+    }
+}
+
 .w {
     width: 100%;
-    // height: 100%;
     background: $colorBackgroundLight;
     border-radius: 0 0 4px 4px;
     transition: height .5s;
@@ -203,8 +214,19 @@ a, span {
     .post {
         margin: 10px 0;
     }
+    .post, .pc {
+        overflow: visible;
+    }
     .pc, .pc * {
         font-size: var(--fs);
+    }
+    .img {
+        cursor: pointer;
+        scale: 1;
+        transition: scale .2s;
+        &:hover {
+            scale: 1.02;
+        }
     }
     .sm, .ic {
         color: $colorForeground;
@@ -1295,6 +1317,42 @@ $inputHeight: 100px;
     }
     to {
         opacity: 1;
+    }
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes fade-in-grow {
+    0% {
+        scale: .6;
+        opacity: 0;
+    }
+
+    50% {
+        scale: 1.02;
+    }
+
+    100% {
+        scale: 1;
+        opacity: 1;
+    }
+}
+@keyframes fade-out-shrink {
+    from {
+        scale: 1;
+        opacity: 1;
+        
+    }
+    to {
+        scale: .6;
+        opacity: 0;
     }
 }
 

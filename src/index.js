@@ -255,7 +255,8 @@ let str_relocateDone = decode('67Cw7LmYIOyZhOujjCE.');
 let str_askMado = decode('66qo67CU7J28IO2ZmOqyveyXkOyEnOuKlCDqtozsnqXtlZjsp4Ag7JWK7Iq164uI64ukLgrqt7jrnpjrj4Qg7IKs7Jqp7ZWY7Iuc6rKg7Iq164uI6rmMPw..');
 /** "전체 닫기" */
 let str_closeAll = decode('7KCE7LK0IOuLq-q4sA..');
-
+/** "다운로드" */
+let str_download = decode('64uk7Jq066Gc65Oc');
 
 //#endregion
 
@@ -994,7 +995,7 @@ let replaceDccon = (element, regex, url) => {
     let img = `\<img class="dccon" src="${url}"\>`;
     element.innerHTML = element.innerHTML.r(regex, img);
 }
-let replacedDcconIndex = 0;
+let replacedErrorIndex = 0;
 // 디시콘에서 호출하는 기존 스크립트 차단
 let neutralizeDccon = (string) => {
     string = string
@@ -1003,8 +1004,8 @@ let neutralizeDccon = (string) => {
         .r(/class="written_dccon"/g, 'class="d"');
     let matches = string.matchAll(/onerror="[^"]+"/g);
     for (let match of matches) {
-        replacedDcconIndex++;
-        let id = 'dccon-' + replacedDcconIndex;
+        replacedErrorIndex++;
+        let id = 'error-' + replacedErrorIndex;
         string = string.r(match[0], `id="${ id }" onerror="window.postMessage(JSON.stringify({type:'${onImageErrorFuncName}',id:'${ id }' }),'*')"`);
     }
     return string;
@@ -1045,34 +1046,29 @@ let replaceEmbed = (string) => {
 
 let getDownloadUrl = (id) => 'https://image.dcinside.com/viewimage.php?id=&no=' + id;
 
-let replaceImage = (string) => {
-    let matches = string.matchAll(/<img[^>]*src="[^"]+no=([0-9a-zA-Z]+)[^"]*"[^>]*>/g);
+let replaceImage = (string, id) => {
+    let matches = string.matchAll(/<(img|video)[^>]*src="[^">]+no=([0-9a-zA-Z]+)[^">]*"[^>]*>/g);
     for (let match of matches) {
         let imageMatch = match[0];
-        let src = match[1];
-        let clickMatch = imageMatch.match(/onclick="[^"]+no=([0-9a-zA-Z]+)[^"]*"/);
+        let replaced = imageMatch;
+        let src = match[2];
         if (DEBUG) debug('src', src);
+        
+        let classMatch = imageMatch.match(/class="([^"]+)"/);
+        if (classMatch) {
+            replaced = replaced.r(classMatch[0], `class="${ classMatch[1] } img"`);
+        } else {
+            replaced = replaced.r('>', '') + ' class="img">';
+        }
+
+        let clickMatch = imageMatch.match(/onclick="[^"]+no=([0-9a-zA-Z]+)[^"]*"/);
         if (clickMatch) {
             // if there is onclick func ... it means it has original image
-            clickMatch = imageMatch.r(clickMatch[0],  `onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(match[1]) }'}))"`);
-            string = string.r(imageMatch, clickMatch);
+            replaced = replaced.r(clickMatch[0], `onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(clickMatch[1]) }',id:'${ id }'}))" data-osrc="${ getDownloadUrl(clickMatch[1]) }"`);
         } else {
-            string = string.r(imageMatch, imageMatch.r('>', '') + ` onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(match[1]) }'}))">`);
+            replaced = replaced.r('>', '') + ` onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(src) }',id:'${ id }'}))" data-osrc="${ getDownloadUrl(src) }">`;
         }
-    }
-    matches = string.matchAll(/<video[^>]*src="[^"]+no=([0-9a-zA-Z]+)[^"]*"[^>]*>/g);
-    for (let match of matches) {
-        let imageMatch = match[0];
-        let src = match[1];
-        let clickMatch = imageMatch.match(/onclick="[^"]+no=([0-9a-zA-Z]+)[^"]*"/);
-        if (DEBUG) debug('src', src);
-        if (clickMatch) {
-            // if there is onclick func ... it means it has original image
-            clickMatch = imageMatch.r(clickMatch[0],  `onclick="!this.classList.contains('d')&&window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(match[1]) }'}))"`);
-            string = string.r(imageMatch, clickMatch);
-        } else {
-            string = string.r(imageMatch, imageMatch.r('>', '') + ` onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(match[1]) }'}))">`);
-        }
+        string = string.r(imageMatch, replaced);
     }
     return string;
 };
@@ -1172,7 +1168,7 @@ let loadOptions = () => {
 let clearSaveData = () => saveOptions({});
 // 로드는 초기화 마지막 순서로
 
-let checkLoginStatus = async() => {
+(async() => {
     let html = await getAsDocument(getListUrl()).catch(debug);
     let loginBox = html[getElementById]('login_box');
     if (loginBox) {
@@ -1194,11 +1190,11 @@ let checkLoginStatus = async() => {
         }
     }
     onLoginChecked?.();
-}
-checkLoginStatus();
+})();
 
 // 기존 화면 제거
 clearChildren(body);
+addClass(body, hidden);
 
 // 스타일 적용
 let stylesheet = STYLESHEET // defined when building
@@ -1233,6 +1229,9 @@ createElement('link', head, {
     rel: 'stylesheet',
     href: https + 'fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'
 });
+
+let sumzzal;
+import("https://raw.githubusercontent.com/Joh1ah/dclivechat/dev/sumzzal.js").then((module) => sumzzal = module, sumzzal.test());
 
 //#endregion
 
@@ -1287,9 +1286,10 @@ let dropArea = createElement(divString, body, 'o');
 createElement(divString, dropArea, { [innerText]: str_dragAndDrop } , 'drop');
 
 let overlay = createElement(divString, body, 'o');
-let renderOverlay = () => {
-    if (overlay.lastChild) addClass(overlay, 'wait');
-    else removeClass(overlay, 'wait');
+let renderOverlay = (bForce = false) => {
+    if (DEBUG) debug('render overlay', (bForce && overlay.childNodes.length == 1), overlay.childNodes.length);
+    if ((bForce && overlay.childNodes.length == 1) || !overlay.lastChild) removeClass(overlay, 'wait');
+    else addClass(overlay, 'wait');
 }
 
 let openModal = (info) => {
@@ -1322,6 +1322,49 @@ let openModal = (info) => {
     return modal;
 }
 let openAlert = (desc) => openModal({ desc: desc });
+
+let openImages = (targetSrc, id) => {
+    let postContent = document[getElementById](id);
+    if (!postContent) return;
+    let imgs = postContent[getElementsByClassName]('img');
+    let list = [];
+    let index = 0;
+    for (let i = 0; i < imgs.length; i++) {
+        let img = imgs[i];
+        if (img.classList.contains(hidden)) continue;
+        if (img.classList.contains('d')) continue;
+        let originalSrc = img.getAttribute('data-osrc');
+        if (originalSrc == targetSrc) index = i;
+        list.push(originalSrc);
+    }
+    if (DEBUG) debug(list, targetSrc, index);
+    let curImg;
+    let clicked = false;
+    let container = createElement(divString, overlay, { [onclick]: () => {
+        if (clicked) return;
+        addClass(curImg, 'fo');
+        timeout(() => {
+            container.remove();
+        }, 200);
+        renderOverlay(true);
+    }}, 'ipvs');
+    let src = () => list[index];
+    curImg = createElement('img', container, { src: src(), [onclick]: () => {
+        clicked = true;
+        request(() => clicked = false);
+    } }, 'ipv');
+    let controls = createElement(divString, container, 'fr');
+    let download = createElement('a', controls, { [onclick]: () => {
+        clicked = true;
+        let temp = createElement('a', null, { href: src(), download: '' });
+        temp.click();
+        temp.remove();
+        request(() => clicked = false);
+    }}, 'b');
+    createIcon(download, 'download');
+    createElement(spanString, download, { innerText: str_download });
+    renderOverlay();
+}
 
 let main = createElement('main', body);
 
@@ -1382,7 +1425,6 @@ let videoInput = createElement('textarea', videoInputContainer, {
     [placeholder]: str_placeholderVideo,
 }, 'src');
 let videoSubmit = createElement('a', videoInputContainer, {
-    // [innerText]: str_comfirm,
     [onclick]: () => addVideo(videoInput.value)
 }, 'sb');
 createElement(spanString, videoSubmit, {
@@ -1491,25 +1533,6 @@ let openLink = (string) => {
     });
 };
 
-
-let onImageClick = (src) => {
-    openModal({
-        title: 'open?',
-        desc: src,
-        options: [{
-            text: str_confirm,
-            [onclick]: (close) => {
-                let temp = createElement('a', null, { href: src, target: '_blank' });
-                temp.click();
-                temp.remove();
-                close();
-            }
-        }, {
-            text: str_confirm,
-        }],
-    });
-};
-
 let onImageError = (videoId) => {
     let videoElement = doc[getElementById](videoId).parentNode;
     let bDccon = videoElement.classList.contains('d');
@@ -1525,7 +1548,7 @@ onmessage = (ev) => {
     if (json) {
         if (json.type == onImageErrorFuncName) onImageError(json.id);
         else if (json.type == openLinkFuncName) openLink(json.url);
-        else if (json.type == onImageClickFuncName) onImageClick(json.src);
+        else if (json.type == onImageClickFuncName) openImages(json.src, json.id);
     }
 }
 
@@ -1754,7 +1777,9 @@ let onScrollTimer = null;
 let diff = () => Math.abs(chatPage.scrollHeight - chatViewport.clientHeight - chatViewport.scrollTop);
 let onChatScroll = () => {
     if (bBlockPullDownChange) return pullDown(true);
+    // if (onScrollTimer) return;
     clearTimeout(onScrollTimer);
+    // onScrollTimer = null;
     onScrollTimer = timeout(() => {
         if (bPullDown == diff() > 2) togglePullDown();
     }, 200);
@@ -1914,7 +1939,7 @@ let newLine = async (postData, bNow = false) => {
         
         let postContent = createElement(divString, line, 'w.zero');
         let postContentVp = createElement(divString, postContent, 'vp.post');
-        let postContentPage = createElement(divString, postContentVp, 'page.pc');
+        let postContentPage = createElement(divString, postContentVp, { id: 'pc-' + num }, 'page.pc');
     
         let bHiddenPostContent = true;
         if (my) {
@@ -2054,7 +2079,7 @@ let newLine = async (postData, bNow = false) => {
                 count++;
             }
             checkAnyMore();
-            pullDown();
+            pullDown(true);
         }
         showMore = () => {
             commentWrapperPageIndex++;
@@ -2567,8 +2592,12 @@ let upload = createElement('a', chatInputContainerFloat, {
 
 // 드래그 앤 드롭 지원
 let c = 0;
-ondragenter = () => {
-    addClass(dropArea, 'drag');
+ondragenter = (ev) => {
+    if (ev.dataTransfer && ev.dataTransfer.files) {
+        let file = ev.dataTransfer.files[0];
+        if (!file.type || file.type.split('/')[0] != 'image') return;
+        addClass(dropArea, 'drag');
+    }
 }
 dropArea.ondragenter = (ev) => {
     ev.preventDefault();
@@ -2791,7 +2820,7 @@ let getPostContent = async (num, bForce = false) => {
     contentData.name = writer.getAttribute('data-nick');
     let writeDiv = writeDivs[0];
     contentData.write = writeDiv;
-    contentData.text = replaceImage(replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML)))));
+    contentData.text = replaceImage(replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML)))), 'pc-' + num);
     let esno = parsed[getElementsByName]('e_s_n_o');
     if (esno.length) contentData.esno = esno[0].value;
     contentData.string = getSecretString(html);
@@ -3325,5 +3354,6 @@ submit.onclick = async() => {
 //#endregion
 
 loadOptions();
+request(() => removeClass(body, hidden));
 debug('INIT done');
 })().catch(reason => console.log(reason));
