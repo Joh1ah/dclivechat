@@ -1,10 +1,26 @@
-$colorBackgroundDark: #0d0d0e;
-$colorBackground: #1b1b1d;
-$colorBackgroundLight: #333;
-$colorForegroundDark: #a5a5a5;
-$colorForeground: white;
+// $colorBackgroundDark: #0d0d0e;
+// $colorBackground: #1b1b1d;
+// $colorBackgroundLight: #333;
+// $colorForegroundDark: #a5a5a5;
+// $colorForeground: white;
+$colorShadow: var(--cs);
+$colorBackgroundDarker: var(--cbdr);
+$colorBackgroundDark: rgb(var(--cbd));
+$colorBackground: var(--cb);
+$colorBackgroundLight: rgb(var(--cbl));
+$colorBackgroundDark80: rgba(var(--cbd), .8);
+$colorBackgroundLight80: rgba(var(--cbl), .8);
+$colorBackgroundOption: var(--cbo);
+$colorForegroundDark: rgb(var(--cfd));
+$colorForeground: rgb(var(--cf));
+$colorForegroundDark80: rgba(var(--cfd), .8);
+$colorForeground20: rgba(var(--cf), .2);
+$colorForeground40: rgba(var(--cf), .4);
+// theme: twitch
+$colorHighlightFore: white;
 $colorHighlightDark: #691f9c;
 $colorHighlight: #7e4ca0;
+
 $colorWarning: #d42727;
 
 * {
@@ -40,12 +56,37 @@ html {
     min-height: 100vh;
 }
 body {
+    // color
+    --cs: black;
+    --cbdr: black;
+    --cbd: 13, 13, 14;
+    --cb: #1b1b1d;
+    --cbl: 51, 51, 51;
+    --cfd: 165, 165, 165;
+    --cf: 255, 255, 255;
+    --cbo: #0d0d0e;
+
     overflow: hidden;
     background: $colorBackground;
     height: 100vh;
     letter-spacing: .02em;
     font-size: var(--fs);
 }
+.light {
+    --cs: #383838;
+    --cbdr: rgb(255, 255, 255);
+    --cbd: 232, 232, 232;
+    --cb: rgb(255, 255, 255);
+    --cbl: 220, 220, 220;
+    --cfd: 0, 0, 0;
+    --cf: 13, 13, 14;
+    --cbo: white;
+}
+
+.f-white {
+    color: $colorHighlightFore !important;
+}
+
 div, main, a {
     display: flex;
 }
@@ -57,6 +98,7 @@ span {
 *::placeholder {
     line-height: 1.7em;
     font-size: var(--fs);
+    color: $colorForegroundDark;
 }
 
 a {
@@ -81,12 +123,13 @@ a, span {
 .abs, .abs-tr, .abs-tl, .o, .modal {
     position: absolute;
 }
-.abs-tr {
+.o, .abs-tr, .abs-tl {
     top: 0;
+}
+.abs-r, .abs-tr {
     right: 0;
 }
 .o, .abs-tl {
-    top: 0;
     left: 0;
 }
 
@@ -106,7 +149,7 @@ a, span {
     &.wait, &.drag {
         opacity: 1;
         pointer-events: initial;
-        background: rgba($color: $colorBackgroundDark, $alpha: .8);
+        background: $colorBackgroundDark80;
     }
     >.drop {
         pointer-events: none;
@@ -205,7 +248,10 @@ a, span {
     display: flex;
     margin: 0 16px;
     padding: 8px 12px;
-    color: $colorForeground;
+    color: $colorHighlightFore;
+    >* {
+        color: $colorHighlightFore;
+    }
     font-weight: bold;
     background: $colorHighlight;
     &:hover {
@@ -242,7 +288,7 @@ input, textarea {
     white-space: nowrap;
     line-break: anywhere;
     &:focus {
-        background: black;
+        background: $colorBackgroundDarker;
         border: 2px solid $colorHighlight;
     }
 }
@@ -254,7 +300,7 @@ input, textarea, .b, .r, .p, .sb, .modal {
 
 .p {
     background: $colorBackground;
-    box-shadow: black 0 0 10px;
+    box-shadow: $colorShadow 0 0 10px;
     z-index: 1;
 
     >.pc {
@@ -327,15 +373,15 @@ input, textarea, .b, .r, .p, .sb, .modal {
     padding: 10px;
     >.opt {
         width: calc(100% - 20px);
-        margin: 10px;
+        padding: 4px 10px;
+        margin: 2px 0;
         justify-content: space-between;
         cursor: pointer;
         .value {
             position: relative;
-            // align-self: flex-end;
             height: 20px;
             width: 40px;
-            background: black;
+            background: $colorBackgroundDarker;
             border-radius: 100px;
             border: 2px solid $colorForegroundDark;
             transition: all .2s;
@@ -362,6 +408,12 @@ input, textarea, .b, .r, .p, .sb, .modal {
             &::after {
                 background: $colorHighlight;
                 left: 20px;
+            }
+        }
+        &.r {
+            position: relative;
+            &:hover {
+                background: $colorBackgroundLight;
             }
         }
     }
@@ -579,12 +631,12 @@ img.nikcon {
     margin: 10px;
     font-weight: bold;
     &:hover {
-        background: rgba($color: white, $alpha: .2);
+        background: $colorForeground20;
     }
     &.t {
-        background: rgba($color: white, $alpha: .2);
+        background: $colorForeground20;
         &:hover {
-            background: rgba($color: white, $alpha: .4);
+            background: $colorForeground40;
         }
     }
 }
@@ -619,7 +671,7 @@ img.nikcon {
     position: absolute;
     width: 100%;
     height: 100%;
-    background: rgba($color: $colorBackgroundDark, $alpha: .8);
+    background: $colorBackgroundDark80;
 }
 
 ::-webkit-scrollbar {
@@ -651,7 +703,7 @@ $filledSettings:
     'GRAD' 200,
     $settings;
 
-$border: #333 1px solid;
+$border: $colorBackgroundLight 1px solid;
 
 .material-symbols-outlined {
     font-variation-settings:
@@ -667,7 +719,6 @@ $border: #333 1px solid;
 }
 
 .icon {
-    font-size: inherit;
     padding: 0;
 }
 
@@ -764,7 +815,7 @@ iframe {
 .grab {
     display: none;
     position: absolute;
-    background: rgba($color: $colorBackgroundLight, $alpha: .8);
+    background: $colorBackgroundLight80;
     width: 100%;
     height: 100%;
 }
@@ -848,9 +899,9 @@ $inputHeight: 100px;
     grid-row: 3;
     >a {
         position: absolute;
-        background: rgba($color: black, $alpha: .8);
+        background: $colorBackgroundDark80;
         &:hover {
-            background: rgba($color: $colorBackgroundLight , $alpha: .8);
+            background: $colorBackgroundLight80;
         }
     }
     >.pd {
@@ -1216,13 +1267,13 @@ $inputHeight: 100px;
 
 @keyframes glow {
     0% {
-        background-color: rgba($color: $colorForegroundDark, $alpha: .8);
+        background-color: $colorForegroundDark80;
     }
     50% {
         background-color: transparent;
     }
     100% {
-        background-color: rgba($color: $colorForegroundDark, $alpha: .8);
+        background-color: $colorForegroundDark80;
     }
 }
 

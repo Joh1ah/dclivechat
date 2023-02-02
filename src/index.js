@@ -90,7 +90,7 @@ let str_noSupportMobile = decode('UEPrsoTsoIQg7Y6Y7J207KeA7JeQ7IScIOuLpOyLnCDsi5
 /** "로그아웃" */
 let str_logout = decode('66Gc6re47JWE7JuD');
 /** "확인" */
-let str_comfirm = decode('7ZmV7J24');
+let str_confirm = decode('7ZmV7J24');
 /** "취소" */
 let str_cancel = decode('7Leo7IaM');
 /** "네" */
@@ -167,6 +167,10 @@ let str_settings_shortLatency = decode('7Ken7J2AIOyxhO2MhSDsp4Dsl7Dsi5zqsIQ.');
 let str_settings_chatOnly = decode('67Cp7IahIOyXhuydtCDssYTtjIXssL3rp4wg7IKs7Jqp');
 /** "유동 로그인 숨기기" */
 let str_settings_hideLogin = decode('7Jyg64-ZIOuhnOq3uOyduCDsiKjquLDquLA.');
+/** "다크 모드" */
+let str_settings_darkMode = decode('64uk7YGsIOuqqOuTnA..');
+/** "채팅 표시 방법" */
+let str_settings_chat = decode('7LGE7YyFIO2RnOyLnCDrsKnrspU.');
 /** "채팅" */
 let str_chat = decode('7LGE7YyF');
 /** "삭제되었거나 존재하지 않는 게시물입니다." */
@@ -286,7 +290,8 @@ let onclick = 'onclick';
 // document에 할당하여 실행할 전역 함수 이름
 let appName = 'dclivechat';
 let openLinkFuncName = 'onopenlink';
-let onerrorFuncName = 'ondcconerror';
+let onImageErrorFuncName = 'ondcconerror';
+let onImageClickFuncName = 'onimageclick';
 
 // 자주 쓰이는 클래스 이름
 let hidden = 'hidden';
@@ -414,7 +419,7 @@ let logDiv;
 let debug = (...any) => {
     let string = '[' + ((getNow() - initTime) / 1000).toFixed(2) + ']';
     console.log(string, ...any);
-    if (logDiv) {
+    if (DEBUG && logDiv) {
         for (let item of any) {
             string += ' ' + (item.toString?.() ?? '');
         }
@@ -989,17 +994,20 @@ let replaceDccon = (element, regex, url) => {
     let img = `\<img class="dccon" src="${url}"\>`;
     element.innerHTML = element.innerHTML.r(regex, img);
 }
+let replacedDcconIndex = 0;
 // 디시콘에서 호출하는 기존 스크립트 차단
 let neutralizeDccon = (string) => {
-    return string
-        .r(/onmousedown="[^"]+"/, '')
-        .r(/onerror="[^"]+"/, `onerror="document.${onerrorFuncName}(this.parentNode)"`) // 
-        .r(/class="written_dccon"/g, 'class="d"') ;
-};
-doc[onerrorFuncName] = (videoElement) => {
-    let src = videoElement.getAttribute('data-src');
-    videoElement.insertAdjacentElement('beforebegin', createElement('img', null, { src: src }, 'd'));
-    addClass(videoElement, hidden);
+    string = string
+        .r(/onmousedown="[^"]+"/g, '')
+        // .r(/onerror="[^"]+"/, `onerror="document.${onerrorFuncName}(this.parentNode)"`)
+        .r(/class="written_dccon"/g, 'class="d"');
+    let matches = string.matchAll(/onerror="[^"]+"/g);
+    for (let match of matches) {
+        replacedDcconIndex++;
+        let id = 'dccon-' + replacedDcconIndex;
+        string = string.r(match[0], `id="${ id }" onerror="window.postMessage(JSON.stringify({type:'${onImageErrorFuncName}',id:'${ id }' }),'*')"`);
+    }
+    return string;
 };
 
 //#endregion
@@ -1034,6 +1042,40 @@ let replaceEmbed = (string) => {
     }
     return string;
 }
+
+let getDownloadUrl = (id) => 'https://image.dcinside.com/viewimage.php?id=&no=' + id;
+
+let replaceImage = (string) => {
+    let matches = string.matchAll(/<img[^>]*src="[^"]+no=([0-9a-zA-Z]+)[^"]*"[^>]*>/g);
+    for (let match of matches) {
+        let imageMatch = match[0];
+        let src = match[1];
+        let clickMatch = imageMatch.match(/onclick="[^"]+no=([0-9a-zA-Z]+)[^"]*"/);
+        if (DEBUG) debug('src', src);
+        if (clickMatch) {
+            // if there is onclick func ... it means it has original image
+            clickMatch = imageMatch.r(clickMatch[0],  `onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(match[1]) }'}))"`);
+            string = string.r(imageMatch, clickMatch);
+        } else {
+            string = string.r(imageMatch, imageMatch.r('>', '') + ` onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(match[1]) }'}))">`);
+        }
+    }
+    matches = string.matchAll(/<video[^>]*src="[^"]+no=([0-9a-zA-Z]+)[^"]*"[^>]*>/g);
+    for (let match of matches) {
+        let imageMatch = match[0];
+        let src = match[1];
+        let clickMatch = imageMatch.match(/onclick="[^"]+no=([0-9a-zA-Z]+)[^"]*"/);
+        if (DEBUG) debug('src', src);
+        if (clickMatch) {
+            // if there is onclick func ... it means it has original image
+            clickMatch = imageMatch.r(clickMatch[0],  `onclick="!this.classList.contains('d')&&window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(match[1]) }'}))"`);
+            string = string.r(imageMatch, clickMatch);
+        } else {
+            string = string.r(imageMatch, imageMatch.r('>', '') + ` onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(match[1]) }'}))">`);
+        }
+    }
+    return string;
+};
 
 let setIntervalIndex = (index) => interval = intervalPresets[index];
 
@@ -1229,10 +1271,12 @@ scrollToTop();
 
 // 첫 글 목록이 로드되기 전에 스크롤 고정이 풀리는 문제를 강제로 막음
 timeout(() => {
+    if (DEBUG) debug('400');
     scrollToTop();
     bPullDown = true;
     pullDown(true);
     timeout(() => {
+        if (DEBUG) debug('400 done');
         pullDown(true);
         bBlockPullDownChange = false;
     }, 400);
@@ -1249,7 +1293,7 @@ let renderOverlay = () => {
 }
 
 let openModal = (info) => {
-    let options = info.options ?? [{ text: str_comfirm, [onclick]: (close) => close() }];
+    let options = info.options ?? [{ text: str_confirm, [onclick]: (close) => close() }];
     let modal = createElement(divString, overlay, 'modal');
     if (info.title) createElement(divString, modal, { [innerText]: info.title }, 'tt');
     if (info.desc) createElement(divString, modal ,{ [innerText]: info.desc }, 'desc');
@@ -1342,7 +1386,7 @@ let videoSubmit = createElement('a', videoInputContainer, {
     [onclick]: () => addVideo(videoInput.value)
 }, 'sb');
 createElement(spanString, videoSubmit, {
-    [innerText]: str_comfirm,
+    [innerText]: str_confirm,
 });
 enterAsClick(videoInput, videoSubmit);
 
@@ -1437,7 +1481,7 @@ let openLink = (string) => {
                 close();
             }
         }, {
-            text: str_comfirm,
+            text: str_confirm,
             [onclick]: (close) => {
                 addVideo(decoded);
                 close();
@@ -1446,9 +1490,43 @@ let openLink = (string) => {
         close: true,
     });
 };
+
+
+let onImageClick = (src) => {
+    openModal({
+        title: 'open?',
+        desc: src,
+        options: [{
+            text: str_confirm,
+            [onclick]: (close) => {
+                let temp = createElement('a', null, { href: src, target: '_blank' });
+                temp.click();
+                temp.remove();
+                close();
+            }
+        }, {
+            text: str_confirm,
+        }],
+    });
+};
+
+let onImageError = (videoId) => {
+    let videoElement = doc[getElementById](videoId).parentNode;
+    let bDccon = videoElement.classList.contains('d');
+    let src = videoElement.getAttribute('data-src');
+    let imageElement = createElement('img', null, { src: src }, bDccon ? 'd' : '_');
+    if (!bDccon) imageElement[onclick] = () => onImageClick(src);
+    videoElement.insertAdjacentElement('beforebegin', imageElement);
+    addClass(videoElement, hidden);
+};
+
 onmessage = (ev) => {
     let json = JSON.parse(ev.data);
-    if (json && json.type == openLinkFuncName) openLink(json.url);
+    if (json) {
+        if (json.type == onImageErrorFuncName) onImageError(json.id);
+        else if (json.type == openLinkFuncName) openLink(json.url);
+        else if (json.type == onImageClickFuncName) onImageClick(json.src);
+    }
 }
 
 let removeVideoPlayer = (url, videoDiv) => {
@@ -1660,7 +1738,8 @@ let appendListener = (postNum, commentNum, onClickNotify) => {
 }
 
 let scrollDownButton = createElement('a', chatBottomContainer, {
-    [onclick]: () => togglePullDown()
+    [onclick]: () => togglePullDown(),
+    onscroll: (ev) => ev.preventDefault(),
 }, 'r.pd.fr', (bMobileDevice ? 'm' : '_'), hidden);
 
 let scrollDownButtonDiv1 = createElement(divString, scrollDownButton, 'not-hover');
@@ -1743,6 +1822,7 @@ let checkMaxPost = () => {
 // 채팅창 스크롤 고정 효과
 let _pullDown = () => chatViewport.scrollTop = chatPage.scrollHeight;
 pullDown = (bForced = false) => {
+    if (DEBUG) debug('pulldown', bBlockPullDownChange, bForced);
     if (bBlockPullDownChange && bForced) _pullDown();
     else request(() => {
         if (bPullDown && (bForced || onScrollTimer == null)) _pullDown();
@@ -2038,7 +2118,6 @@ let newLine = async (postData, bNow = false) => {
                     removeClass(commentCount, hidden);
                     pullDown(true);
                 }
-                if (DEBUG) debug(num, listeningPost);
                 if (!bHiddenPostContent || listeningPost[num]) updateComment().catch(debug);
             }
             // 댓글 수 변하는 타이밍을 임의로 설정
@@ -2194,6 +2273,7 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
         removeClass(lastTargetDiv, 'wr');
         removeClass(lastTargetDiv, 'rp');
         lastTargetButtonSpan[innerText] = str_writeComment;
+        removeClass(lastTargetButtonSpan, 'f-white');
         addClass(replyInfoContainer, hidden);
         addClass(replyingTypeIcon, hidden);
         addClass(replyingTypeNameSpan, hidden);
@@ -2234,12 +2314,14 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
             }
             replyingToSpan[innerText] = str_replyTo;
             tButton[innerText] = str_cancel;
+            removeClass(tButton, 'f-white');
         } else {
             let postData = postContentDatas[num];
             replyingNameSpan[innerText] = postData.name;
             input[placeholder] = str_placeholderComment;
             replyingToSpan[innerText] = str_commentTo;
             tButton[innerText] = str_writeNewComment;
+            addClass(tButton, 'f-white');
         }
         removeClass(replyInfoContainer, hidden);
         lastTargetDiv = tDiv;
@@ -2524,15 +2606,30 @@ renderUploadImage = () => {
 //#region 
 
 if (DEBUG) debug('settings');
+let toggleSettings, changeSettingsPage;
 
 let settingsPanel = createElement(divString, chatInputContainer, 'p.p-settings', hidden);
 createElement(spanString, createElement(divString, settingsPanel, 'hd'), { [innerText]: str_settings }, 'h');
-let options = createElement(divString, settingsPanel, 'opts');
+createIcon(createElement('a', settingsPanel, { [onclick]: () => toggleSettings() }, 'b.abs-tr'), 'close'); 
+let settingsBack = createElement('a', settingsPanel, { [onclick]: () => changeSettingsPage() }, 'b.abs-tl', hidden);
+createIcon(settingsBack, 'navigate_before'); 
+let settingsPage = createElement(divString, settingsPanel);
+let options = createElement(divString, settingsPage, 'opts');
+let optionsChat = createElement(divString, settingsPage, 'opts', hidden);
+
+let lastPage = options;
+changeSettingsPage = (page = options) => {
+    addClass(lastPage, hidden)
+    removeClass(page, hidden);
+    lastPage = page;
+    if (page == options) addClass(settingsBack, hidden);
+    else removeClass(settingsBack, hidden);
+};
 
 // 옵션 엔트리 작성 및 브라우저 저장/로드
-let createOption = (labelText, onChecked, onUnchecked, initialToggle = false) => {
+let createOption = (labelText, onChecked, onUnchecked, initialToggle = false, page = options) => {
     let toggled = initialToggle;
-    let option = createElement(divString, options, 'opt');
+    let option = createElement(divString, page, 'opt');
     if (toggled) addClass(option, 'chk');
     createElement(spanString, option, { [innerText]: labelText }, 'label');
     let changeToggled = (bool) => {
@@ -2550,16 +2647,22 @@ let createOption = (labelText, onChecked, onUnchecked, initialToggle = false) =>
     onApplyFunc[labelText] = changeToggled;
     _applyOption(labelText, initialToggle);
     return option;
-}
-let createOptionProperty = (labelText, propertyName, onChecked, onUnchecked, initialToggle) => 
-    createOption(labelText, () => setStyleVariable(propertyName, onChecked), () => setStyleVariable(propertyName, onUnchecked), initialToggle);
+};
+let createOptionProperty = (labelText, propertyName, onChecked, onUnchecked, initialToggle, page) => 
+    createOption(labelText, () => setStyleVariable(propertyName, onChecked), () => setStyleVariable(propertyName, onUnchecked), initialToggle, page);
+let createPageSelect = (labelText, page) => {
+    let option = createElement(divString, options, { [onclick]: () => changeSettingsPage(page) }, 'opt.r');
+    createElement(spanString, option, { [innerText]: labelText }, 'label');
+    createIcon(option, 'navigate_next', 'abs-r');
+};
 
 // default: true
+createOption(str_settings_darkMode, () => removeClass(body, 'light'), () => addClass(body, 'light'), true);
 let madoOption = createOption(str_settings_mado, () => {
     bMado = true;
     if (bMobileDevice && !getOption('mado')) {
         openModal({
-            title: str_comfirm,
+            title: str_confirm,
             desc: str_askMado,
             options: [{
                 text: str_yes,
@@ -2584,20 +2687,9 @@ let madoOption = createOption(str_settings_mado, () => {
     renderRow();
 }, !bMobileDevice);
 
-let scrollBehaviorName = '--sb';
-createOptionProperty(str_settings_smoothScroll, scrollBehaviorName, 'smooth', 'auto', true);
-createOption(str_settings_showUnfixId, () => {
-    removeClass(chatPage, 'hu');
-    pullDown(true);
-}, () => {
-    addClass(chatPage, 'hu');
-    pullDown(true);
-}, true);
+createPageSelect(str_settings_chat, optionsChat);
 let useLinkInContent = true;
 createOption(str_settings_appendLink, () => useLinkInContent = true, () => useLinkInContent = false, true);
-
-let countColorName = '--cc';
-createOptionProperty(str_settings_commentHighlight, countColorName, '#fc5', 'white', true);
 
 // default: false
 createOption(str_settings_hideLogin, () => {
@@ -2608,6 +2700,25 @@ createOption(str_settings_hideLogin, () => {
     removeClass(loginInputContainer, hidden);
     removeClass(loginInputExpander, hidden);
 });
+createOption(str_settings_shortLatency, () => setIntervalIndex(1), () => setIntervalIndex(0));
+createOption(str_settings_chatOnly, () => addClass(main, 'co'), () => removeClass(main, 'co'));
+
+// page: chat
+// 반고닉 아이디 표시
+createOption(str_settings_showUnfixId, () => {
+    removeClass(chatPage, 'hu');
+    pullDown(true);
+}, () => {
+    addClass(chatPage, 'hu');
+    pullDown(true);
+}, true, optionsChat);
+// 댓글 수 하이라이트
+let countColorName = '--cc';
+createOptionProperty(str_settings_commentHighlight, countColorName, '#fc5', 'var(--cf)', true, optionsChat);
+// 부드러운 스크롤 애니메이션
+let scrollBehaviorName = '--sb';
+createOptionProperty(str_settings_smoothScroll, scrollBehaviorName, 'smooth', 'auto', true, optionsChat);
+// 폰트 크기 확대
 let fontSizeName = '--fs';
 createOption(str_settings_bigFont, () => {
     setStyleVariable(fontSizeName, '15px');
@@ -2615,15 +2726,16 @@ createOption(str_settings_bigFont, () => {
 }, () => {
     setStyleVariable(fontSizeName, '13px');
     pullDown(true);
-});
+}, false, optionsChat);
+// 디시콘 크기 줄이기
 let dcconSizeName = '--ds';
-createOptionProperty(str_settings_smallDccon, dcconSizeName, '60px', '80px');
-createOption(str_settings_shortLatency, () => setIntervalIndex(1), () => setIntervalIndex(0));
-createOption(str_settings_chatOnly, () => addClass(main, 'co'), () => removeClass(main, 'co'));
+createOptionProperty(str_settings_smallDccon, dcconSizeName, '60px', '80px', false, optionsChat);
+
+// footer
 createElement(spanString, settingsPanel, { [innerText]: 'version: ' + VERSION }, 'version');
 
 let settingsHidden = true;
-let toggleSettings = () => {
+toggleSettings = () => {
     settingsHidden = !settingsHidden;
     if (settingsHidden) addClass(settingsPanel, hidden); 
     else removeClass(settingsPanel, hidden);
@@ -2679,7 +2791,7 @@ let getPostContent = async (num, bForce = false) => {
     contentData.name = writer.getAttribute('data-nick');
     let writeDiv = writeDivs[0];
     contentData.write = writeDiv;
-    contentData.text = replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML))));
+    contentData.text = replaceImage(replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML)))));
     let esno = parsed[getElementsByName]('e_s_n_o');
     if (esno.length) contentData.esno = esno[0].value;
     contentData.string = getSecretString(html);

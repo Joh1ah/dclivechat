@@ -3,7 +3,7 @@
 디시인사이드를 실시간 채팅창으로 바꿔주는 북마크렛입니다.
 [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.0.1-20230125`
+최신 버전: `2.1.0-20230201`
 
 <br>
 
@@ -54,6 +54,11 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 <br>
 
 ## Changelog
+v 2.1.0-20230201
+* 설정을 카테고리별로 분리
+* 라이트 모드 및 다크 모드 추가
+* 유튜브 테마 추가
+
 v 2.0.1-20230125
 * 앱이 정상적으로 로드되지 않았을 때의 예외 처리 추가
 
