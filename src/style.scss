@@ -1,10 +1,22 @@
-$colorBackgroundDark: #0d0d0e;
-$colorBackground: #1b1b1d;
-$colorBackgroundLight: #333;
-$colorForegroundDark: #a5a5a5;
-$colorForeground: white;
+$colorShadow: var(--cs);
+$colorBackgroundDarker: var(--cbdr);
+$colorBackgroundDark: rgb(var(--cbd));
+$colorBackground: var(--cb);
+$colorBackgroundLight: rgb(var(--cbl));
+$colorBackgroundDark80: rgba(var(--cbd), .8);
+$colorBackgroundLight80: rgba(var(--cbl), .8);
+$colorBackgroundOption: var(--cbo);
+$colorForegroundDark: rgb(var(--cfd));
+$colorForeground: rgb(var(--cf));
+$colorForegroundDark80: rgba(var(--cfd), .8);
+$colorForeground20: rgba(var(--cf), .2);
+$colorForeground40: rgba(var(--cf), .4);
+// theme: twitch
+$colorHighlightFore: white;
 $colorHighlightDark: #691f9c;
 $colorHighlight: #7e4ca0;
+$colorHighlightLight: #8c62a8;
+
 $colorWarning: #d42727;
 
 * {
@@ -40,12 +52,41 @@ html {
     min-height: 100vh;
 }
 body {
+    // color
+    --cs: black;
+    --cbdr: black;
+    --cbd: 13, 13, 14;
+    --cb: #1b1b1d;
+    --cbl: 51, 51, 51;
+    --cfd: 165, 165, 165;
+    --cf: 255, 255, 255;
+    --cbo: #0d0d0e;
+
+    --f: ;
+
     overflow: hidden;
     background: $colorBackground;
     height: 100vh;
     letter-spacing: .02em;
     font-size: var(--fs);
 }
+.light {
+    --cs: #383838;
+    --cbdr: rgb(255, 255, 255);
+    --cbd: 232, 232, 232;
+    --cb: rgb(255, 255, 255);
+    --cbl: 220, 220, 220;
+    --cfd: 0, 0, 0;
+    --cf: 13, 13, 14;
+    --cbo: white;
+
+    --f: hue-rotate(-10deg) brightness(.8) contrast(1.1);
+}
+
+.f-white {
+    color: $colorHighlightFore !important;
+}
+
 div, main, a {
     display: flex;
 }
@@ -57,6 +98,7 @@ span {
 *::placeholder {
     line-height: 1.7em;
     font-size: var(--fs);
+    color: $colorForegroundDark;
 }
 
 a {
@@ -81,11 +123,18 @@ a, span {
 .abs, .abs-tr, .abs-tl, .o, .modal {
     position: absolute;
 }
-.abs-tr {
+.o, .abs-tr, .abs-tl {
     top: 0;
+}
+.abs-r, .abs-tr {
     right: 0;
 }
 .o, .abs-tl {
+    left: 0;
+}
+
+.fix-tl {
+    position: fixed;
     top: 0;
     left: 0;
 }
@@ -101,12 +150,17 @@ a, span {
     z-index: 3;
     pointer-events: none;
     opacity: 0;
+    animation: fade-out .2s;
     background: transparent;
     transition: background-color .1s;
     &.wait, &.drag {
+        animation: fade-in .2s;
         opacity: 1;
         pointer-events: initial;
-        background: rgba($color: $colorBackgroundDark, $alpha: .8);
+        background: $colorBackgroundDark80;
+    }
+    &.drag {
+        z-index: 4;
     }
     >.drop {
         pointer-events: none;
@@ -123,6 +177,7 @@ a, span {
     background: $colorBackground;
     padding: 20px 30px;
     min-width: 200px;
+    animation: fade-in-grow .2s;
     >.tt {
         font-weight: bold;
         padding: 1em 40px;
@@ -138,9 +193,22 @@ a, span {
     }
 }
 
+.ipvs {
+    width: 100vw;
+    height: 100vh;
+    margin-bottom: var(--mb);
+    >.ipv {
+        animation: fade-in-grow .2s;
+        max-height: calc(90vh - 30px);
+        max-width: 90vw;
+        &.fo {
+            animation: fade-out-shrink .2s;
+        }
+    }
+}
+
 .w {
     width: 100%;
-    // height: 100%;
     background: $colorBackgroundLight;
     border-radius: 0 0 4px 4px;
     transition: height .5s;
@@ -160,8 +228,19 @@ a, span {
     .post {
         margin: 10px 0;
     }
+    .post, .pc {
+        overflow: visible;
+    }
     .pc, .pc * {
         font-size: var(--fs);
+    }
+    .img {
+        cursor: pointer;
+        scale: 1;
+        transition: scale .2s;
+        &:hover {
+            scale: 1.02;
+        }
     }
     .sm, .ic {
         color: $colorForeground;
@@ -205,7 +284,10 @@ a, span {
     display: flex;
     margin: 0 16px;
     padding: 8px 12px;
-    color: $colorForeground;
+    color: $colorHighlightFore;
+    >* {
+        color: $colorHighlightFore;
+    }
     font-weight: bold;
     background: $colorHighlight;
     &:hover {
@@ -242,7 +324,7 @@ input, textarea {
     white-space: nowrap;
     line-break: anywhere;
     &:focus {
-        background: black;
+        background: $colorBackgroundDarker;
         border: 2px solid $colorHighlight;
     }
 }
@@ -254,7 +336,7 @@ input, textarea, .b, .r, .p, .sb, .modal {
 
 .p {
     background: $colorBackground;
-    box-shadow: black 0 0 10px;
+    box-shadow: $colorShadow 0 0 10px;
     z-index: 1;
 
     >.pc {
@@ -327,15 +409,15 @@ input, textarea, .b, .r, .p, .sb, .modal {
     padding: 10px;
     >.opt {
         width: calc(100% - 20px);
-        margin: 10px;
+        padding: 4px 10px;
+        margin: 2px 0;
         justify-content: space-between;
         cursor: pointer;
         .value {
             position: relative;
-            // align-self: flex-end;
             height: 20px;
             width: 40px;
-            background: black;
+            background: $colorBackgroundDarker;
             border-radius: 100px;
             border: 2px solid $colorForegroundDark;
             transition: all .2s;
@@ -362,6 +444,12 @@ input, textarea, .b, .r, .p, .sb, .modal {
             &::after {
                 background: $colorHighlight;
                 left: 20px;
+            }
+        }
+        &.r {
+            position: relative;
+            &:hover {
+                background: $colorBackgroundLight;
             }
         }
     }
@@ -398,6 +486,7 @@ input, textarea, .b, .r, .p, .sb, .modal {
                 }
                 .nc * {
                     color: var(--cc);
+                    filter: var(--f);
                 }
             }
         }
@@ -424,6 +513,7 @@ input, textarea, .b, .r, .p, .sb, .modal {
     }
 
     &.wr {
+        opacity: 1 !important;
         .ic {
             background: $colorHighlight;
             &:hover {
@@ -579,12 +669,12 @@ img.nikcon {
     margin: 10px;
     font-weight: bold;
     &:hover {
-        background: rgba($color: white, $alpha: .2);
+        background: $colorForeground20;
     }
     &.t {
-        background: rgba($color: white, $alpha: .2);
+        background: $colorForeground20;
         &:hover {
-            background: rgba($color: white, $alpha: .4);
+            background: $colorForeground40;
         }
     }
 }
@@ -619,7 +709,7 @@ img.nikcon {
     position: absolute;
     width: 100%;
     height: 100%;
-    background: rgba($color: $colorBackgroundDark, $alpha: .8);
+    background: $colorBackgroundDark80;
 }
 
 ::-webkit-scrollbar {
@@ -651,7 +741,7 @@ $filledSettings:
     'GRAD' 200,
     $settings;
 
-$border: #333 1px solid;
+$border: $colorBackgroundLight 1px solid;
 
 .material-symbols-outlined {
     font-variation-settings:
@@ -667,7 +757,6 @@ $border: #333 1px solid;
 }
 
 .icon {
-    font-size: inherit;
     padding: 0;
 }
 
@@ -686,12 +775,12 @@ main {
 
     >div {
         width: 100%;
-        position: relative;
+        // position: relative;
     }
 }
 
 .main {
-    height: calc(100% - var(--mh));
+    height: 100%;
     >div {
         position: absolute;
         transition: all .2s;
@@ -764,7 +853,7 @@ iframe {
 .grab {
     display: none;
     position: absolute;
-    background: rgba($color: $colorBackgroundLight, $alpha: .8);
+    background: $colorBackgroundLight80;
     width: 100%;
     height: 100%;
 }
@@ -778,8 +867,23 @@ iframe {
 .menu {
     overflow: hidden;
     justify-content: flex-end;
-    height: var(--mh);
-    background: $colorBackgroundLight;
+    height: 50px;
+    background: $colorBackgroundLight80;
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    transition: top .2s;
+    &.e {
+        top: -50px;
+    }
+    span {
+        white-space: nowrap;
+    }
+    >.stretch {
+        cursor: pointer;;
+        width: 100%;
+        height: 100%;
+    }
 }
 
 .chat {
@@ -790,6 +894,9 @@ iframe {
     >* {
         position: relative;
         width: var(--cw);
+    }
+    >.vp.r .chl {
+        opacity: .2;
     }
 }
 
@@ -848,9 +955,9 @@ $inputHeight: 100px;
     grid-row: 3;
     >a {
         position: absolute;
-        background: rgba($color: black, $alpha: .8);
+        background: $colorBackgroundDark80;
         &:hover {
-            background: rgba($color: $colorBackgroundLight , $alpha: .8);
+            background: $colorBackgroundLight80;
         }
     }
     >.pd {
@@ -927,6 +1034,11 @@ $inputHeight: 100px;
     grid-row: 5;
     >div {
         width: 100%;
+        padding: 6px 0;
+        background: $colorHighlight;
+        * {
+            color: white;
+        }
     }
 }
 
@@ -940,6 +1052,9 @@ $inputHeight: 100px;
         >div {
             width: 100%;
         }
+    }
+    &.wr {
+        background: linear-gradient($colorHighlight, $colorBackground 80%);
     }
 }
 
@@ -1040,6 +1155,9 @@ $inputHeight: 100px;
     .dm {
         height: 100px;
     }
+    .d {
+        cursor: pointer;
+    }
 }
 
 .p.up {
@@ -1113,17 +1231,17 @@ $inputHeight: 100px;
         align-items: flex-start;
     }
     .video {
-        height: calc(60vw + var(--mh));
+        height: 60vw;
         width: 100vw;
         position: fixed;
         top: 0;
     }
     .chat {
-        height: calc(100vh - var(--mb) - 60vw - var(--mh));
+        height: calc(100vh - var(--mb) - 60vw);
         min-height: 0;
         width: 100vw;
         position: fixed;
-        top: calc(60vw + var(--mh));
+        top: 60vw;
         >* {
             width: 100vw;
         }
@@ -1216,13 +1334,13 @@ $inputHeight: 100px;
 
 @keyframes glow {
     0% {
-        background-color: rgba($color: $colorForegroundDark, $alpha: .8);
+        background-color: $colorForegroundDark80;
     }
     50% {
         background-color: transparent;
     }
     100% {
-        background-color: rgba($color: $colorForegroundDark, $alpha: .8);
+        background-color: $colorForegroundDark80;
     }
 }
 
@@ -1244,6 +1362,42 @@ $inputHeight: 100px;
     }
     to {
         opacity: 1;
+    }
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes fade-in-grow {
+    0% {
+        scale: .6;
+        opacity: 0;
+    }
+
+    50% {
+        scale: 1.02;
+    }
+
+    100% {
+        scale: 1;
+        opacity: 1;
+    }
+}
+@keyframes fade-out-shrink {
+    from {
+        scale: 1;
+        opacity: 1;
+        
+    }
+    to {
+        scale: .6;
+        opacity: 0;
     }
 }
 

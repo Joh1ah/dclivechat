@@ -3,7 +3,6 @@
  * git: https://github.com/Joh1ah/dclivechat
  */
 (async() => {
-
 /**
  * ** deprecated **
  * NOTE: 용량 최적화
@@ -90,7 +89,7 @@ let str_noSupportMobile = decode('UEPrsoTsoIQg7Y6Y7J207KeA7JeQ7IScIOuLpOyLnCDsi5
 /** "로그아웃" */
 let str_logout = decode('66Gc6re47JWE7JuD');
 /** "확인" */
-let str_comfirm = decode('7ZmV7J24');
+let str_confirm = decode('7ZmV7J24');
 /** "취소" */
 let str_cancel = decode('7Leo7IaM');
 /** "네" */
@@ -167,6 +166,10 @@ let str_settings_shortLatency = decode('7Ken7J2AIOyxhO2MhSDsp4Dsl7Dsi5zqsIQ.');
 let str_settings_chatOnly = decode('67Cp7IahIOyXhuydtCDssYTtjIXssL3rp4wg7IKs7Jqp');
 /** "유동 로그인 숨기기" */
 let str_settings_hideLogin = decode('7Jyg64-ZIOuhnOq3uOyduCDsiKjquLDquLA.');
+/** "다크 모드" */
+let str_settings_darkMode = decode('64uk7YGsIOuqqOuTnA..');
+/** "채팅 표시 방법" */
+let str_settings_chat = decode('7LGE7YyFIO2RnOyLnCDrsKnrspU.');
 /** "채팅" */
 let str_chat = decode('7LGE7YyF');
 /** "삭제되었거나 존재하지 않는 게시물입니다." */
@@ -251,7 +254,8 @@ let str_relocateDone = decode('67Cw7LmYIOyZhOujjCE.');
 let str_askMado = decode('66qo67CU7J28IO2ZmOqyveyXkOyEnOuKlCDqtozsnqXtlZjsp4Ag7JWK7Iq164uI64ukLgrqt7jrnpjrj4Qg7IKs7Jqp7ZWY7Iuc6rKg7Iq164uI6rmMPw..');
 /** "전체 닫기" */
 let str_closeAll = decode('7KCE7LK0IOuLq-q4sA..');
-
+/** "다운로드" */
+let str_download = decode('64uk7Jq066Gc65Oc');
 
 //#endregion
 
@@ -274,9 +278,9 @@ let commentSignitureLength = 8;
 let highlightDuration = 500;
 
 // 자주 쓰이는 함수 이름
-let getElementById = 'getElementById';
+// let getElementById = 'getElementById';
 let getElementsByClassName = 'getElementsByClassName';
-let getElementsByName = 'getElementsByName';
+// let getElementsByName = 'getElementsByName';
 let getElementsByTagName = 'getElementsByTagName';
 let querySelector = 'querySelector';
 let innerText = 'innerText';
@@ -286,7 +290,8 @@ let onclick = 'onclick';
 // document에 할당하여 실행할 전역 함수 이름
 let appName = 'dclivechat';
 let openLinkFuncName = 'onopenlink';
-let onerrorFuncName = 'ondcconerror';
+let onImageErrorFuncName = 'ondcconerror';
+let onImageClickFuncName = 'onimageclick';
 
 // 자주 쓰이는 클래스 이름
 let hidden = 'hidden';
@@ -414,9 +419,10 @@ let logDiv;
 let debug = (...any) => {
     let string = '[' + ((getNow() - initTime) / 1000).toFixed(2) + ']';
     console.log(string, ...any);
-    if (logDiv) {
+    if (DEBUG && logDiv) {
         for (let item of any) {
-            string += ' ' + (item.toString?.() ?? '');
+            if (typeof item == 'undefined') string += ' undefined';
+            else string += ' ' + (item.toString?.() ?? '');
         }
         createElement('p', logDiv, { [innerText]: string });
     }
@@ -546,10 +552,11 @@ let bytes = (size) => {
     }
 };
 
-let parser = new DOMParser();
 let parseHtml = (text) => {
     try {
-        return parser.parseFromString(text, 'text/html');
+        let doc = new DOMParser().parseFromString(text, 'text/html').documentElement;
+        detach(doc);
+        return doc;
     } catch (e) {
         debug(e);
         return null;
@@ -574,6 +581,10 @@ let createIcon = (parent, name, ...classes) => {
 };
 let clearChildren = (element) => {
     while(element.lastChild) element.removeChild(element.lastChild);
+};
+let detach = (element) => {
+    element.parentNode.removeChild(element);
+    return element;
 };
 let addClass = (element, ...className) => {
     element.classList.add(...className);
@@ -785,6 +796,7 @@ let dcconSavedInfo = {};
 let dcconSavedInfoReversed = {};
 let dcconSavedInfoImgCode = {};
 let dcconSavedInfoIdx = {};
+let dcconPreload = () => getOption('dccon') ?? {};
 
 let onPackageDetail;
 let loadingDccon = false;
@@ -799,6 +811,11 @@ let _loadDcconDetail = async () => {
     if (dcconSavedInfoReversed[code] != undefined) return r(), timeout(_loadDcconDetail, 1); // proceed to next
     let json = await postDcconPackageDetail(code).catch(debug);
     if (!json) return r();
+    _processDcconData(json);
+    r(), timeout(_loadDcconDetail, 100);
+}
+
+let _processDcconData = (json) => {
     let packageName = json['info']['title'];
     let packageIdx = json['info']['package_idx'];
     let dccons = json['detail'];
@@ -813,8 +830,27 @@ let _loadDcconDetail = async () => {
     dcconSavedInfo[packageName] = packageInfo;
     let listImgCode = json['info']['list_img_path'];
     dcconSavedInfoImgCode[packageName] = listImgCode;
-    r(), timeout(_loadDcconDetail, 100);
-}
+
+    if (!dcconPreload()[packageIdx]) {
+        let detail = [];
+        for (let dccon of dccons) {
+            detail.push({
+                title: dccon['title'],
+                path: dccon['path'],
+            });
+        }
+        dcconPreload()[packageIdx] = {
+            info: {
+                title: packageName,
+                package_idx: packageIdx,
+                list_img_path: listImgCode,
+            },
+            detail: detail,
+        };
+        applyOption('dccon', dcconPreload());
+    }
+};
+
 let loadDcconDetail = (code) => {
     let { r, p } = initPromise();
     pending.push([code, r]);
@@ -989,17 +1025,20 @@ let replaceDccon = (element, regex, url) => {
     let img = `\<img class="dccon" src="${url}"\>`;
     element.innerHTML = element.innerHTML.r(regex, img);
 }
+let replacedErrorIndex = 0;
 // 디시콘에서 호출하는 기존 스크립트 차단
 let neutralizeDccon = (string) => {
-    return string
-        .r(/onmousedown="[^"]+"/, '')
-        .r(/onerror="[^"]+"/, `onerror="document.${onerrorFuncName}(this.parentNode)"`) // 
-        .r(/class="written_dccon"/g, 'class="d"') ;
-};
-doc[onerrorFuncName] = (videoElement) => {
-    let src = videoElement.getAttribute('data-src');
-    videoElement.insertAdjacentElement('beforebegin', createElement('img', null, { src: src }, 'd'));
-    addClass(videoElement, hidden);
+    string = string
+        .r(/onmousedown="[^"]+"/g, '')
+        // .r(/onerror="[^"]+"/, `onerror="document.${onerrorFuncName}(this.parentNode)"`)
+        .r(/class="written_dccon"/g, 'class="d"');
+    let matches = string.matchAll(/onerror="[^"]+"/g);
+    for (let match of matches) {
+        replacedErrorIndex++;
+        let id = 'error-' + replacedErrorIndex;
+        string = string.r(match[0], `id="${ id }" onerror="window.postMessage(JSON.stringify({type:'${onImageErrorFuncName}',id:'${ id }' }),'*')"`);
+    }
+    return string;
 };
 
 //#endregion
@@ -1029,21 +1068,52 @@ let replaceEmbed = (string) => {
     let matches = string.matchAll(/<embed src="([^\?"]*)([^"]*)"([^>]+)>/g);
     for (let match of matches) {
         if (DEBUG) debug('replacing', string);
-        string = string.r(match[0], `<iframe src="${match[1] + (match[2] ? match[2] + '&' : '?')}enablejsapi=1"${match[3]}></iframe>`);
+        string = string.r(match[0], `<iframe src="${match[1] + (match[2] ? match[2] + '&' : '?')}enablejsapi=1"${match[3]} sandbox="allow-same-origin allow-scripts"></iframe>`);
         if (DEBUG) debug('replaced', string);
     }
     return string;
 }
 
+let getDownloadUrl = (id) => 'https://image.dcinside.com/viewimage.php?id=&no=' + id;
+
+let replaceImage = (string, id) => {
+    let matches = string.matchAll(/<(img|video)[^>]*src="[^">]+no=([0-9a-zA-Z]+)[^">]*"[^>]*>/g);
+    for (let match of matches) {
+        let imageMatch = match[0];
+        let replaced = imageMatch;
+        let src = match[2];
+        if (DEBUG) debug('src', src);
+
+        if (/class="d"/.test(imageMatch)) continue;
+        
+        let classMatch = imageMatch.match(/class="([^"]+)"/);
+        if (classMatch) {
+            replaced = replaced.r(classMatch[0], `class="${ classMatch[1] } img"`);
+        } else {
+            replaced = replaced.r('>', '') + ' class="img">';
+        }
+
+        let clickMatch = imageMatch.match(/onclick="[^"]+no=([0-9a-zA-Z]+)[^"]*"/);
+        if (clickMatch) {
+            // if there is onclick func ... it means it has original image
+            replaced = replaced.r(clickMatch[0], `onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(clickMatch[1]) }',id:'${ id }'}))" data-osrc="${ getDownloadUrl(clickMatch[1]) }"`);
+        } else {
+            replaced = replaced.r('>', '') + ` onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(src) }',id:'${ id }'}))" data-osrc="${ getDownloadUrl(src) }" draggable="false">`;
+        }
+        string = string.r(imageMatch, replaced);
+    }
+    return string;
+};
+
 let setIntervalIndex = (index) => interval = intervalPresets[index];
 
 let updateFormData = (html, data) => {
     for (let id in data) {
-        let value = html[getElementById](id);
+        let value = html[querySelector]('#' + id);
         if (value) data[id] = value.value;
         else {
-            value = html[getElementsByName](id);
-            if (value && value.length) data[id] = value[0].value;
+            value = html[querySelector](`[name='${ id }']`);
+            if (value) data[id] = value.value;
         }
     }
     if (!gallType && formData._GALLTYPE_) gallType = formData._GALLTYPE_;
@@ -1110,12 +1180,12 @@ let saveOptions = (override) => {
     let string = JSON.stringify(override ?? _saveData);
     storage?.setItem(appName, string);
 };
-let _applyOption = (optionKey, bool) => {
-    _saveData[optionKey] = bool;
-    onApplyFunc[optionKey]?.(bool);
+let _applyOption = (optionKey, value) => {
+    _saveData[optionKey] = value;
+    onApplyFunc[optionKey]?.(value);
 };
-let applyOption = (optionKey, bool) => {
-    _applyOption(optionKey, bool);
+let applyOption = (optionKey, value) => {
+    _applyOption(optionKey, value);
     saveOptions();
 };
 let getOption = (optionKey) => {
@@ -1125,14 +1195,14 @@ let loadOptions = () => {
     let string = storage?.getItem(appName) ?? '';
     if (!string) return;
     _saveData = JSON.parse(string);
-    for (let key in _saveData) applyOption(key, _saveData[key]);
+    for (let key in _saveData) _applyOption(key, _saveData[key]);
 };
 let clearSaveData = () => saveOptions({});
 // 로드는 초기화 마지막 순서로
 
-let checkLoginStatus = async() => {
+(async() => {
     let html = await getAsDocument(getListUrl()).catch(debug);
-    let loginBox = html[getElementById]('login_box');
+    let loginBox = html[querySelector]('#login_box');
     if (loginBox) {
         let loginButtons = loginBox[getElementsByClassName]('btn_inout');
         if (loginButtons.length > 0) {
@@ -1152,11 +1222,11 @@ let checkLoginStatus = async() => {
         }
     }
     onLoginChecked?.();
-}
-checkLoginStatus();
+})();
 
 // 기존 화면 제거
 clearChildren(body);
+addClass(body, hidden);
 
 // 스타일 적용
 let stylesheet = STYLESHEET // defined when building
@@ -1191,6 +1261,8 @@ createElement('link', head, {
     rel: 'stylesheet',
     href: https + 'fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'
 });
+
+if (bMobileDevice) initCaptchaV3();
 
 //#endregion
 
@@ -1229,10 +1301,12 @@ scrollToTop();
 
 // 첫 글 목록이 로드되기 전에 스크롤 고정이 풀리는 문제를 강제로 막음
 timeout(() => {
+    if (DEBUG) debug('400');
     scrollToTop();
     bPullDown = true;
     pullDown(true);
     timeout(() => {
+        if (DEBUG) debug('400 done');
         pullDown(true);
         bBlockPullDownChange = false;
     }, 400);
@@ -1243,13 +1317,14 @@ let dropArea = createElement(divString, body, 'o');
 createElement(divString, dropArea, { [innerText]: str_dragAndDrop } , 'drop');
 
 let overlay = createElement(divString, body, 'o');
-let renderOverlay = () => {
-    if (overlay.lastChild) addClass(overlay, 'wait');
-    else removeClass(overlay, 'wait');
+let renderOverlay = (bForce = false) => {
+    if (DEBUG) debug('render overlay', (bForce && overlay.childNodes.length == 1), overlay.childNodes.length);
+    if ((bForce && overlay.childNodes.length == 1) || !overlay.lastChild) removeClass(overlay, 'wait');
+    else addClass(overlay, 'wait');
 }
 
 let openModal = (info) => {
-    let options = info.options ?? [{ text: str_comfirm, [onclick]: (close) => close() }];
+    let options = info.options ?? [{ text: str_confirm, [onclick]: (close) => close() }];
     let modal = createElement(divString, overlay, 'modal');
     if (info.title) createElement(divString, modal, { [innerText]: info.title }, 'tt');
     if (info.desc) createElement(divString, modal ,{ [innerText]: info.desc }, 'desc');
@@ -1279,6 +1354,51 @@ let openModal = (info) => {
 }
 let openAlert = (desc) => openModal({ desc: desc });
 
+let openImage = (targetSrc, id) => {
+    let postContent = document[querySelector]('#' + id);
+    if (!postContent) return;
+    let imgs = postContent[getElementsByClassName]('img');
+    let list = [];
+    let index = 0;
+    for (let i = 0; i < imgs.length; i++) {
+        let img = imgs[i];
+        if (img.classList.contains(hidden)) continue;
+        if (img.classList.contains('d')) continue;
+        let originalSrc = img.getAttribute('data-osrc');
+        if (originalSrc == targetSrc) index = i;
+        list.push(originalSrc);
+    }
+    if (DEBUG) debug(list, targetSrc, index);
+    let curImg;
+    let clicked = false;
+    let container = createElement(divString, overlay, { [onclick]: () => {
+        if (clicked) return;
+        addClass(curImg, 'fo');
+        timeout(() => {
+            container.remove();
+        }, 200);
+        renderOverlay(true);
+    }}, 'ipvs');
+    let src = () => list[index];
+    curImg = createElement('img', container, { src: src(), draggable: false, [onclick]: () => {
+        clicked = true;
+        request(() => clicked = false);
+    }}, 'ipv');
+
+    let controls = createElement(divString, container, 'fr');
+    let download = createElement('a', controls, { [onclick]: () => {
+        clicked = true;
+        let temp = createElement('a', null, { href: curImg.src, download: '' });
+        temp.click();
+        temp.remove();
+        request(() => clicked = false);
+    }}, 'b');
+    createIcon(download, 'download');
+    createElement(spanString, download, { innerText: str_download });
+
+    renderOverlay();
+}
+
 let main = createElement('main', body);
 
 //#endregion
@@ -1295,6 +1415,21 @@ let videoContainer = createElement(divString, main, 'video');
 // 마도 지원 - 20230119
 let menu = createElement(divString, videoContainer, 'menu');
 let videoMain = createElement(divString, videoContainer, 'main');
+
+let menuExpanded = true;
+let menuExpandButton;
+let toggleMenu = () => {
+    menuExpanded = !menuExpanded;
+    if (menuExpanded) {
+        removeClass(menu, 'e');
+        menuExpandButton[innerText] = 'expand_less';
+    } else {
+        addClass(menu, 'e');
+        menuExpandButton[innerText] = 'expand_more';
+    }
+};
+
+createElement(divString, menu, { [onclick]: toggleMenu }, 'stretch');
 
 let addVideoButton = createElement('a', menu, { [onclick]: () => {
     addClass(videoMain, 'go');
@@ -1326,6 +1461,8 @@ let closeAllVideosButton = createElement('a', menu, 'b', disabled);
 createIcon(closeAllVideosButton, 'close');
 createElement(spanString, closeAllVideosButton, { [innerText]: str_closeAll });
 
+menuExpandButton = createIcon(createElement('a', menu, { [onclick]: toggleMenu }, 'b.fix-tl'), 'expand_less');
+
 let videoInputContainer = createElement(divString, videoMain, 'p.fr');
 let videoInputCloseButton = createElement('a', videoInputContainer, {
     [onclick]: () => {
@@ -1338,11 +1475,10 @@ let videoInput = createElement('textarea', videoInputContainer, {
     [placeholder]: str_placeholderVideo,
 }, 'src');
 let videoSubmit = createElement('a', videoInputContainer, {
-    // [innerText]: str_comfirm,
     [onclick]: () => addVideo(videoInput.value)
 }, 'sb');
 createElement(spanString, videoSubmit, {
-    [innerText]: str_comfirm,
+    [innerText]: str_confirm,
 });
 enterAsClick(videoInput, videoSubmit);
 
@@ -1351,14 +1487,15 @@ let videoDivs = [];
 let renderRow = () => {
     if (!bMado) {
         let newLength = Math.min(videoDivs.length, 1);
-        setStyleVariable('--mh', '0px');
+        // setStyleVariable('--mh', '0px');
+        addClass(menu, hidden);
         loadedVideoUrls.length = newLength;
         for (let i = 1; i < videoDivs.length; i++) {
             videoDivs[i]?.remove();
         }
         videoDivs.length = newLength;
         if (relocating) relocateVideoButton.click();
-    } else setStyleVariable('--mh', '50px');
+    } else removeClass(menu, hidden); // setStyleVariable('--mh', '50px');
     addClass(relocateVideoButton, disabled);
     
     removeClass(relocateVideoButton, '.t');
@@ -1413,6 +1550,7 @@ let addVideo = (url) => {
     if (!url) return openAlert(str_noValidUrl);
     if (url == 'show log') return removeClass(logDiv, hidden);
     if (url == 'clear options') return clearSaveData();
+    if (url == 'show options') return debug(_saveData);
     if (!/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/.test(url))
         return openAlert(str_noValidUrl);
     _addVideo(url);
@@ -1437,7 +1575,7 @@ let openLink = (string) => {
                 close();
             }
         }, {
-            text: str_comfirm,
+            text: str_confirm,
             [onclick]: (close) => {
                 addVideo(decoded);
                 close();
@@ -1446,9 +1584,24 @@ let openLink = (string) => {
         close: true,
     });
 };
+
+let onImageError = (videoId) => {
+    let videoElement = doc[querySelector]('#' + videoId).parentNode;
+    let bDccon = videoElement.classList.contains('d');
+    let src = videoElement.getAttribute('data-src');
+    let imageElement = createElement('img', null, { src: src, draggable: false }, bDccon ? 'd' : '_');
+    if (!bDccon) imageElement[onclick] = () => onImageClick(src);
+    videoElement.insertAdjacentElement('beforebegin', imageElement);
+    addClass(videoElement, hidden);
+};
+
 onmessage = (ev) => {
     let json = JSON.parse(ev.data);
-    if (json && json.type == openLinkFuncName) openLink(json.url);
+    if (json) {
+        if (json.type == onImageErrorFuncName) onImageError(json.id);
+        else if (json.type == openLinkFuncName) openLink(json.url);
+        else if (json.type == onImageClickFuncName) openImage(json.src, json.id);
+    }
 }
 
 let removeVideoPlayer = (url, videoDiv) => {
@@ -1480,7 +1633,7 @@ let draggingIndex = () => videoDivs.indexOf(draggingDiv);
 let draggingUrl = '';
 let moving = false;
 let offsetX = 0, offsetY = 0;
-let addVideoIframe = (url, options = null) => {
+let addVideoIframe = (url, options = {}) => {
     videoInput.value = '';
     if (loadedVideoUrls.includes(url)) {
         let div = videoDivs[loadedVideoUrls.indexOf(url)];
@@ -1561,6 +1714,7 @@ let addVideoIframe = (url, options = null) => {
         
     }, 'grab.fr');
     createIcon(videoDrag, 'drag_indicator');
+    options.sandbox = 'allow-same-origin allow-scripts'; // v2.1.0-20230202
     let video = createElement('iframe', videoDiv, options);
     renderRow();
     video.src = url;
@@ -1635,7 +1789,7 @@ let renderNotify = () => {
         notifyCountSpan[innerText] = notificationList.length < 10 ? notificationList.length : '9+';
     }
 };
-let getNotificationKey = (postNum, commentNum) => postNum + '_' + commentNum;
+let getNotificationKey = (postNum, commentNum) => 'n' + postNum + '_' + commentNum;
 let checkAddNotification = (postNum, commentNum, commentDiv = null) => {
     if (!listeningPost[postNum]) {
         if (DEBUG) debug('post', postNum, 'is not my post');
@@ -1660,7 +1814,8 @@ let appendListener = (postNum, commentNum, onClickNotify) => {
 }
 
 let scrollDownButton = createElement('a', chatBottomContainer, {
-    [onclick]: () => togglePullDown()
+    [onclick]: () => togglePullDown(),
+    onscroll: (ev) => ev.preventDefault(),
 }, 'r.pd.fr', (bMobileDevice ? 'm' : '_'), hidden);
 
 let scrollDownButtonDiv1 = createElement(divString, scrollDownButton, 'not-hover');
@@ -1675,7 +1830,9 @@ let onScrollTimer = null;
 let diff = () => Math.abs(chatPage.scrollHeight - chatViewport.clientHeight - chatViewport.scrollTop);
 let onChatScroll = () => {
     if (bBlockPullDownChange) return pullDown(true);
+    // if (onScrollTimer) return;
     clearTimeout(onScrollTimer);
+    // onScrollTimer = null;
     onScrollTimer = timeout(() => {
         if (bPullDown == diff() > 2) togglePullDown();
     }, 200);
@@ -1743,6 +1900,7 @@ let checkMaxPost = () => {
 // 채팅창 스크롤 고정 효과
 let _pullDown = () => chatViewport.scrollTop = chatPage.scrollHeight;
 pullDown = (bForced = false) => {
+    if (DEBUG) debug('pulldown', bBlockPullDownChange, bForced);
     if (bBlockPullDownChange && bForced) _pullDown();
     else request(() => {
         if (bPullDown && (bForced || onScrollTimer == null)) _pullDown();
@@ -1834,7 +1992,7 @@ let newLine = async (postData, bNow = false) => {
         
         let postContent = createElement(divString, line, 'w.zero');
         let postContentVp = createElement(divString, postContent, 'vp.post');
-        let postContentPage = createElement(divString, postContentVp, 'page.pc');
+        let postContentPage = createElement(divString, postContentVp, { id: 'pc-' + num }, 'page.pc');
     
         let bHiddenPostContent = true;
         if (my) {
@@ -1865,8 +2023,9 @@ let newLine = async (postData, bNow = false) => {
                 for (let iframe of iframes) {
                     iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":[]}', '*');
                 }
+                removeClass(line, 'open');
                 timeout(() => {
-                    removeClass(line, 'open');
+                    // removeClass(line, 'open');
                     pullDown();
                 }, 500);
                 pullDown();
@@ -1974,7 +2133,7 @@ let newLine = async (postData, bNow = false) => {
                 count++;
             }
             checkAnyMore();
-            pullDown();
+            pullDown(true);
         }
         showMore = () => {
             commentWrapperPageIndex++;
@@ -2038,7 +2197,6 @@ let newLine = async (postData, bNow = false) => {
                     removeClass(commentCount, hidden);
                     pullDown(true);
                 }
-                if (DEBUG) debug(num, listeningPost);
                 if (!bHiddenPostContent || listeningPost[num]) updateComment().catch(debug);
             }
             // 댓글 수 변하는 타이밍을 임의로 설정
@@ -2151,7 +2309,7 @@ let replyingNameSpan = createElement(spanString, replyingTab, 'name');
 let replyingTypeIcon = createIcon(replyingTab, 'more_horiz', hidden);
 let replyingTypeNameSpan = createElement(spanString, replyingTab, 'name', hidden);
 let replyingToSpan = createElement(spanString, replyingTab, { [innerText]: str_replyTo });
-createIcon(createElement('a', replyingTab, { [onclick]: () => setTarget(0) }, 'close'), 'cancel');
+// createIcon(createElement('a', replyingTab, { [onclick]: () => setTarget(0) }, 'close'), 'cancel');
 
 //#endregion
 
@@ -2194,7 +2352,9 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
         removeClass(lastTargetDiv, 'wr');
         removeClass(lastTargetDiv, 'rp');
         lastTargetButtonSpan[innerText] = str_writeComment;
+        removeClass(lastTargetButtonSpan, 'f-white');
         addClass(replyInfoContainer, hidden);
+        removeClass(chatViewport, 'r');
         addClass(replyingTypeIcon, hidden);
         addClass(replyingTypeNameSpan, hidden);
     }
@@ -2208,6 +2368,7 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
             addClass(submit, disabled);
             if (!bLogin) addClass(loginInfoContainer, hidden);
         }
+        removeClass(chatInputContainer, 'wr');
         input[placeholder] = str_placeholderMessage;
         lastTargetDiv = null;
         lastTargetButtonSpan = null;
@@ -2234,14 +2395,17 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
             }
             replyingToSpan[innerText] = str_replyTo;
             tButton[innerText] = str_cancel;
+            removeClass(tButton, 'f-white');
         } else {
             let postData = postContentDatas[num];
             replyingNameSpan[innerText] = postData.name;
             input[placeholder] = str_placeholderComment;
             replyingToSpan[innerText] = str_commentTo;
             tButton[innerText] = str_writeNewComment;
+            addClass(tButton, 'f-white');
         }
         removeClass(replyInfoContainer, hidden);
+        addClass(chatViewport, 'r');
         lastTargetDiv = tDiv;
         lastTargetButtonSpan = tButton;
         lastTargetComment = tComment ?? null;
@@ -2280,18 +2444,18 @@ let dcconPage =
 // 패키지 정보가 주어지면 
 onPackageDetail = async (packageName, list, promise) => {
     let hash = await computeHashAsColor(packageName).catch(debug);
-    let id = hash.substring(1);
+    let id = 'dc' + hash.substring(1);
     let linkImage = null;
 
     // make a package page
     let entry = createElement(divString, null, 'package');
-    let existing = doc[getElementById](id);
+    let existing = doc[querySelector]('#' + id);
     if (existing) {
         dcconPage.replaceChild(entry, existing);
     } else {
         dcconPage.appendChild(entry);
         // make a link in list
-        let link = createElement('a', listPage, { href: hash, [onclick]: () => {
+        let link = createElement('a', listPage, { href: '#' + id, [onclick]: () => {
             input.focus();
             scrollToTop();
         } });
@@ -2335,8 +2499,12 @@ onPackageDetail = async (packageName, list, promise) => {
 let populatePackage = async (target) => {
     await loadDcconList(target).catch(debug);
 }
-populatePackage('recent');
-populatePackage('icon');
+
+onApplyFunc['dccon'] = (infos) => {
+    for (let packageName in infos) {
+        _processDcconData(infos[packageName]);
+    }
+}
 
 let panelHidden = true;
 let togglePanel = () => {
@@ -2485,16 +2653,24 @@ let upload = createElement('a', chatInputContainerFloat, {
 
 // 드래그 앤 드롭 지원
 let c = 0;
-ondragenter = () => {
-    addClass(dropArea, 'drag');
+ondragenter = async (ev) => {
+    for (let item of ev.dataTransfer.items) {
+        if (item.type.split('/')[0] == 'image') {
+            // item.getAsFile();
+        }
+    }
+
+    if (ev.dataTransfer && ev.dataTransfer.files) {
+        let file = ev.dataTransfer.files[0];
+        if (!file.type || file.type.split('/')[0] != 'image') return;
+        addClass(dropArea, 'drag');
+    }
 }
 dropArea.ondragenter = (ev) => {
     ev.preventDefault();
-    c++;
 }
 dropArea.ondragover = (ev) => ev.preventDefault();
 dropArea.ondragleave = () => {
-    c--;
     request(() => removeClass(dropArea, 'drag'));
 }
 
@@ -2524,15 +2700,30 @@ renderUploadImage = () => {
 //#region 
 
 if (DEBUG) debug('settings');
+let toggleSettings, changeSettingsPage;
 
 let settingsPanel = createElement(divString, chatInputContainer, 'p.p-settings', hidden);
 createElement(spanString, createElement(divString, settingsPanel, 'hd'), { [innerText]: str_settings }, 'h');
-let options = createElement(divString, settingsPanel, 'opts');
+createIcon(createElement('a', settingsPanel, { [onclick]: () => toggleSettings() }, 'b.abs-tr'), 'close'); 
+let settingsBack = createElement('a', settingsPanel, { [onclick]: () => changeSettingsPage() }, 'b.abs-tl', hidden);
+createIcon(settingsBack, 'navigate_before'); 
+let settingsPage = createElement(divString, settingsPanel);
+let options = createElement(divString, settingsPage, 'opts');
+let optionsChat = createElement(divString, settingsPage, 'opts', hidden);
+
+let lastPage = options;
+changeSettingsPage = (page = options) => {
+    addClass(lastPage, hidden)
+    removeClass(page, hidden);
+    lastPage = page;
+    if (page == options) addClass(settingsBack, hidden);
+    else removeClass(settingsBack, hidden);
+};
 
 // 옵션 엔트리 작성 및 브라우저 저장/로드
-let createOption = (labelText, onChecked, onUnchecked, initialToggle = false) => {
+let createOption = (labelText, onChecked, onUnchecked, initialToggle = false, page = options) => {
     let toggled = initialToggle;
-    let option = createElement(divString, options, 'opt');
+    let option = createElement(divString, page, 'opt');
     if (toggled) addClass(option, 'chk');
     createElement(spanString, option, { [innerText]: labelText }, 'label');
     let changeToggled = (bool) => {
@@ -2550,16 +2741,22 @@ let createOption = (labelText, onChecked, onUnchecked, initialToggle = false) =>
     onApplyFunc[labelText] = changeToggled;
     _applyOption(labelText, initialToggle);
     return option;
-}
-let createOptionProperty = (labelText, propertyName, onChecked, onUnchecked, initialToggle) => 
-    createOption(labelText, () => setStyleVariable(propertyName, onChecked), () => setStyleVariable(propertyName, onUnchecked), initialToggle);
+};
+let createOptionProperty = (labelText, propertyName, onChecked, onUnchecked, initialToggle, page) => 
+    createOption(labelText, () => setStyleVariable(propertyName, onChecked), () => setStyleVariable(propertyName, onUnchecked), initialToggle, page);
+let createPageSelect = (labelText, page) => {
+    let option = createElement(divString, options, { [onclick]: () => changeSettingsPage(page) }, 'opt.r');
+    createElement(spanString, option, { [innerText]: labelText }, 'label');
+    createIcon(option, 'navigate_next', 'abs-r');
+};
 
 // default: true
+createOption(str_settings_darkMode, () => removeClass(body, 'light'), () => addClass(body, 'light'), true);
 let madoOption = createOption(str_settings_mado, () => {
     bMado = true;
     if (bMobileDevice && !getOption('mado')) {
         openModal({
-            title: str_comfirm,
+            title: str_confirm,
             desc: str_askMado,
             options: [{
                 text: str_yes,
@@ -2584,20 +2781,9 @@ let madoOption = createOption(str_settings_mado, () => {
     renderRow();
 }, !bMobileDevice);
 
-let scrollBehaviorName = '--sb';
-createOptionProperty(str_settings_smoothScroll, scrollBehaviorName, 'smooth', 'auto', true);
-createOption(str_settings_showUnfixId, () => {
-    removeClass(chatPage, 'hu');
-    pullDown(true);
-}, () => {
-    addClass(chatPage, 'hu');
-    pullDown(true);
-}, true);
+createPageSelect(str_settings_chat, optionsChat);
 let useLinkInContent = true;
 createOption(str_settings_appendLink, () => useLinkInContent = true, () => useLinkInContent = false, true);
-
-let countColorName = '--cc';
-createOptionProperty(str_settings_commentHighlight, countColorName, '#fc5', 'white', true);
 
 // default: false
 createOption(str_settings_hideLogin, () => {
@@ -2608,6 +2794,25 @@ createOption(str_settings_hideLogin, () => {
     removeClass(loginInputContainer, hidden);
     removeClass(loginInputExpander, hidden);
 });
+createOption(str_settings_shortLatency, () => setIntervalIndex(1), () => setIntervalIndex(0));
+createOption(str_settings_chatOnly, () => addClass(main, 'co'), () => removeClass(main, 'co'));
+
+// page: chat
+// 반고닉 아이디 표시
+createOption(str_settings_showUnfixId, () => {
+    removeClass(chatPage, 'hu');
+    pullDown(true);
+}, () => {
+    addClass(chatPage, 'hu');
+    pullDown(true);
+}, true, optionsChat);
+// 댓글 수 하이라이트
+let countColorName = '--cc';
+createOptionProperty(str_settings_commentHighlight, countColorName, '#fc5', 'var(--cf)', true, optionsChat);
+// 부드러운 스크롤 애니메이션
+let scrollBehaviorName = '--sb';
+createOptionProperty(str_settings_smoothScroll, scrollBehaviorName, 'smooth', 'auto', true, optionsChat);
+// 폰트 크기 확대
 let fontSizeName = '--fs';
 createOption(str_settings_bigFont, () => {
     setStyleVariable(fontSizeName, '15px');
@@ -2615,15 +2820,16 @@ createOption(str_settings_bigFont, () => {
 }, () => {
     setStyleVariable(fontSizeName, '13px');
     pullDown(true);
-});
+}, false, optionsChat);
+// 디시콘 크기 줄이기
 let dcconSizeName = '--ds';
-createOptionProperty(str_settings_smallDccon, dcconSizeName, '60px', '80px');
-createOption(str_settings_shortLatency, () => setIntervalIndex(1), () => setIntervalIndex(0));
-createOption(str_settings_chatOnly, () => addClass(main, 'co'), () => removeClass(main, 'co'));
+createOptionProperty(str_settings_smallDccon, dcconSizeName, '60px', '80px', false, optionsChat);
+
+// footer
 createElement(spanString, settingsPanel, { [innerText]: 'version: ' + VERSION }, 'version');
 
 let settingsHidden = true;
-let toggleSettings = () => {
+toggleSettings = () => {
     settingsHidden = !settingsHidden;
     if (settingsHidden) addClass(settingsPanel, hidden); 
     else removeClass(settingsPanel, hidden);
@@ -2656,7 +2862,6 @@ let getPostContent = async (num, bForce = false) => {
         num: num,
         name: '',
         text: str_nullContent,
-        document: null,
         write: null,
         esno: '',
         string: '',
@@ -2665,23 +2870,27 @@ let getPostContent = async (num, bForce = false) => {
     let parsed = parseHtml(html);
     if (!parsed) return contentData;
 
+    let returnFunc = () => {
+        parsed.remove();
+        return contentData;
+    };
+
     // check captcha
-    if (parsed[getElementById]('code_' + num)) bCaptchaComment = true;
+    if (parsed[querySelector]('#code_' + num)) bCaptchaComment = true;
     else bCaptchaComment = false;
 
-    contentData.document = parsed;
     let writeDivs = parsed[getElementsByClassName]('write_div');
-    if (!writeDivs.length) return contentData;
-    let head = parsed[querySelector]('.gallview_head');
-    if (!head) return contentData;
-    let writer = head[querySelector]('.gall_writer');
-    if (!writer) return contentData;
-    contentData.name = writer.getAttribute('data-nick');
+    if (!writeDivs.length) return returnFunc();
     let writeDiv = writeDivs[0];
+    let head = parsed[querySelector]('.gallview_head');
+    if (!head) return returnFunc();
+    let writer = head[querySelector]('.gall_writer');
+    if (!writer) return returnFunc();
+    contentData.name = writer.getAttribute('data-nick');
     contentData.write = writeDiv;
-    contentData.text = replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML))));
-    let esno = parsed[getElementsByName]('e_s_n_o');
-    if (esno.length) contentData.esno = esno[0].value;
+    contentData.text = replaceImage(replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML)))), 'pc-' + num);
+    let esno = parsed[querySelector]("[name='e_s_n_o']");
+    if (esno) contentData.esno = esno.value;
     contentData.string = getSecretString(html);
     postContentDatas[num] = contentData;
 
@@ -2703,7 +2912,7 @@ let getPostContent = async (num, bForce = false) => {
     commentFormData.service_code = getSecondServiceCode(commentFormData.service_code, contentData.string);
     commentFormDatas[num] = commentFormData;
 
-    return contentData;
+    return returnFunc();
 }
 
 let _getPostComment = async (num, postData, commentData) => {
@@ -2866,6 +3075,8 @@ let updateList = async (force = false) => {
         postDatas.push(postData);
     }
 
+    gall.remove();
+
     if (postDatas.length == 0) return;
     postDatas = postDatas.sort((a, b) => a.num - b.num);
     let lastNumCur = 0;
@@ -2948,20 +3159,26 @@ refreshWriteSession = async() => {
     let html = await getAsText(getWriteUrl()).catch(debug);
     let parsed = parseHtml(html);
     if (!parsed) return onWritingBlocked();
-    let write = parsed[getElementById]('write');
-    if (!write) return onWritingBlocked();
+    let write = parsed[querySelector]('#write');
+    if (!write) {
+        parsed.remove();
+        return onWritingBlocked();
+    }
     onWritingBlocked(false);
     updateFormData(parsed, formData);
     // find service_code validation serial
     _secret = getSecretString(html);
-    bCaptcha = parsed[getElementById]('code') && true;
+    bCaptcha = parsed[querySelector]('#code') && true;
     if (bMini) {
         formData.headtext = 0; // 말머리 일반
         let key = bLogin ? 'nickname' : 'name';
-        let nickname = parsed[getElementById](key);
-        if (nickname) anonymousNickname = nickname.value;
+        let nickname = parsed[querySelector]('#' + key);
+        if (nickname) {
+            anonymousNickname = nickname.value;
+        }
         else anonymousNickname = '';
     }
+    parsed.remove();
     renderInputCaptcha();
     renderInputNickname();
     pullDown(true);
@@ -2969,8 +3186,14 @@ refreshWriteSession = async() => {
 let falseString = (s) => 'false||' + s;
 let makeDcconContent = (url, dcconName) => `<img class="written_dccon" src="${url}" conalt="${dcconName}" alt="${dcconName}" con_alt="${dcconName}" title="${dcconName}">`;
 let lastWrite = 0;
+let getEmbed = async (url) => {
+    let res = await postWrite(host + 'api/ogp', { url: url });
+    if (!res) return `<p><a href="${url}" target="_blank">${url}</a></p>`;
+    let json = JSON.parse(res);
+    if (!json.result) return `<p><a href="${url}" target="_blank">${url}</a></p>`;
+    return `{{_OG_START::${url}^#^${json.og_title}^#^${json.og_description}^#^${json.og_image}::OG_END_}}`;
+}
 let writePost = async (title, content) => {
-    // get second block_key
     formData.subject = encode(title);
     let additionalFormData = {};
     if (!bLogin) {
@@ -3020,19 +3243,21 @@ let writePost = async (title, content) => {
     if (useLinkInContent && loadedVideoUrls.length) {
         for (let i = 0; i < loadedVideoUrls.length; i++) {
             let videoUrl = loadedVideoUrls[i];
+            
             let matchYoutube = videoUrl.match(regexYoutube);
             let matchTwitch = videoUrl.match(regexTwitch);
-            let videoId;
+            let videoId, url;
             if (matchYoutube) { // if youtube
                 videoId = matchYoutube[2];
-                if (i == 0) linkContent += `<p><div class="yt_thum_box"><div class="yt_movie"><embed src="https://www.youtube.com/v/${videoId}?version=3" type="application/x-shockwave-flash" width="560" height="315" allowfullscreen="true"></div><a class="yt_link" href="https://youtu.be/${videoId}" target="_blank">https://youtu.be/${videoId}</a></div><p>`;
-                else linkContent += `<p><a href="https://youtu.be/${videoId}">https://youtu.be/${videoId}</a></p>`;
+                url = 'https://youtu.be/' + videoId;
+                if (i == 0) linkContent += `<p><span class="og-url" style="color:#3b4890" <div=""></span></p><div class="yt_movie"><embed src="https://www.youtube.com/v/${videoId}?version=3" type="application/x-shockwave-flash" width="560" height="315" allowfullscreen="true"></div><a class="yt_link" href="${url}" target="_blank">${url}</a></div>`;
             } else if (matchTwitch) {
                 videoId = matchTwitch[2];
-                linkContent += `<p><a href="https://www.twitch.tv/${videoId}">https://www.twitch.tv/${videoId}</a></p>`;
+                url = 'https://www.twitch.tv/' + videoId;
             } else {
-                linkContent += `<p><a href="${videoUrl}">${videoUrl}</a></p>`;
+                url = videoUrl;
             }
+            linkContent += await getEmbed(url);
         }
     }
     if (linkContent) linkContent += str_lineBreak;
@@ -3056,7 +3281,8 @@ let writePost = async (title, content) => {
         let url = getDcconUrl(packageName, dcconName);
         if (url) content = content.r(dcconString, makeDcconContent(url, dcconName));
     }
-    lastData.memo = encode(imageContent + linkContent + str_lineBreak + /* dcconContent + */ content);
+
+    lastData.memo = encode(imageContent + linkContent + str_lineBreak + dcconContent + content).r(/%20/g, '+');
     let res = await postWrite(articleSubmit, formData, additionalFormData, lastData).catch(debug);
     if (res) {
         let splits = res.split('||');
@@ -3213,5 +3439,8 @@ submit.onclick = async() => {
 //#endregion
 
 loadOptions();
+populatePackage('recent');
+populatePackage('icon');
+request(() => removeClass(body, hidden));
 debug('INIT done');
 })().catch(reason => console.log(reason));
