@@ -15,6 +15,7 @@ $colorForeground40: rgba(var(--cf), .4);
 $colorHighlightFore: white;
 $colorHighlightDark: #691f9c;
 $colorHighlight: #7e4ca0;
+$colorHighlightLight: #8c62a8;
 
 $colorWarning: #d42727;
 
@@ -61,6 +62,8 @@ body {
     --cf: 255, 255, 255;
     --cbo: #0d0d0e;
 
+    --f: ;
+
     overflow: hidden;
     background: $colorBackground;
     height: 100vh;
@@ -76,6 +79,8 @@ body {
     --cfd: 0, 0, 0;
     --cf: 13, 13, 14;
     --cbo: white;
+
+    --f: hue-rotate(-10deg) brightness(.8) contrast(1.1);
 }
 
 .f-white {
@@ -128,6 +133,12 @@ a, span {
     left: 0;
 }
 
+.fix-tl {
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
 .fr, .tab, .opt, main, .sb, .b, .menu {
     flex-direction: row;
     float: none;
@@ -147,6 +158,9 @@ a, span {
         opacity: 1;
         pointer-events: initial;
         background: $colorBackgroundDark80;
+    }
+    &.drag {
+        z-index: 4;
     }
     >.drop {
         pointer-events: none;
@@ -472,6 +486,7 @@ input, textarea, .b, .r, .p, .sb, .modal {
                 }
                 .nc * {
                     color: var(--cc);
+                    filter: var(--f);
                 }
             }
         }
@@ -498,6 +513,7 @@ input, textarea, .b, .r, .p, .sb, .modal {
     }
 
     &.wr {
+        opacity: 1 !important;
         .ic {
             background: $colorHighlight;
             &:hover {
@@ -759,12 +775,12 @@ main {
 
     >div {
         width: 100%;
-        position: relative;
+        // position: relative;
     }
 }
 
 .main {
-    height: calc(100% - var(--mh));
+    height: 100%;
     >div {
         position: absolute;
         transition: all .2s;
@@ -851,8 +867,23 @@ iframe {
 .menu {
     overflow: hidden;
     justify-content: flex-end;
-    height: var(--mh);
-    background: $colorBackgroundLight;
+    height: 50px;
+    background: $colorBackgroundLight80;
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    transition: top .2s;
+    &.e {
+        top: -50px;
+    }
+    span {
+        white-space: nowrap;
+    }
+    >.stretch {
+        cursor: pointer;;
+        width: 100%;
+        height: 100%;
+    }
 }
 
 .chat {
@@ -863,6 +894,9 @@ iframe {
     >* {
         position: relative;
         width: var(--cw);
+    }
+    >.vp.r .chl {
+        opacity: .2;
     }
 }
 
@@ -1000,6 +1034,11 @@ $inputHeight: 100px;
     grid-row: 5;
     >div {
         width: 100%;
+        padding: 6px 0;
+        background: $colorHighlight;
+        * {
+            color: white;
+        }
     }
 }
 
@@ -1013,6 +1052,9 @@ $inputHeight: 100px;
         >div {
             width: 100%;
         }
+    }
+    &.wr {
+        background: linear-gradient($colorHighlight, $colorBackground 80%);
     }
 }
 
@@ -1113,6 +1155,9 @@ $inputHeight: 100px;
     .dm {
         height: 100px;
     }
+    .d {
+        cursor: pointer;
+    }
 }
 
 .p.up {
@@ -1186,17 +1231,17 @@ $inputHeight: 100px;
         align-items: flex-start;
     }
     .video {
-        height: calc(60vw + var(--mh));
+        height: 60vw;
         width: 100vw;
         position: fixed;
         top: 0;
     }
     .chat {
-        height: calc(100vh - var(--mb) - 60vw - var(--mh));
+        height: calc(100vh - var(--mb) - 60vw);
         min-height: 0;
         width: 100vw;
         position: fixed;
-        top: calc(60vw + var(--mh));
+        top: 60vw;
         >* {
             width: 100vw;
         }

@@ -3,7 +3,6 @@
  * git: https://github.com/Joh1ah/dclivechat
  */
 (async() => {
-
 /**
  * ** deprecated **
  * NOTE: 용량 최적화
@@ -279,9 +278,9 @@ let commentSignitureLength = 8;
 let highlightDuration = 500;
 
 // 자주 쓰이는 함수 이름
-let getElementById = 'getElementById';
+// let getElementById = 'getElementById';
 let getElementsByClassName = 'getElementsByClassName';
-let getElementsByName = 'getElementsByName';
+// let getElementsByName = 'getElementsByName';
 let getElementsByTagName = 'getElementsByTagName';
 let querySelector = 'querySelector';
 let innerText = 'innerText';
@@ -422,7 +421,8 @@ let debug = (...any) => {
     console.log(string, ...any);
     if (DEBUG && logDiv) {
         for (let item of any) {
-            string += ' ' + (item.toString?.() ?? '');
+            if (typeof item == 'undefined') string += ' undefined';
+            else string += ' ' + (item.toString?.() ?? '');
         }
         createElement('p', logDiv, { [innerText]: string });
     }
@@ -552,10 +552,11 @@ let bytes = (size) => {
     }
 };
 
-let parser = new DOMParser();
 let parseHtml = (text) => {
     try {
-        return parser.parseFromString(text, 'text/html');
+        let doc = new DOMParser().parseFromString(text, 'text/html').documentElement;
+        detach(doc);
+        return doc;
     } catch (e) {
         debug(e);
         return null;
@@ -580,6 +581,10 @@ let createIcon = (parent, name, ...classes) => {
 };
 let clearChildren = (element) => {
     while(element.lastChild) element.removeChild(element.lastChild);
+};
+let detach = (element) => {
+    element.parentNode.removeChild(element);
+    return element;
 };
 let addClass = (element, ...className) => {
     element.classList.add(...className);
@@ -791,6 +796,7 @@ let dcconSavedInfo = {};
 let dcconSavedInfoReversed = {};
 let dcconSavedInfoImgCode = {};
 let dcconSavedInfoIdx = {};
+let dcconPreload = () => getOption('dccon') ?? {};
 
 let onPackageDetail;
 let loadingDccon = false;
@@ -805,6 +811,11 @@ let _loadDcconDetail = async () => {
     if (dcconSavedInfoReversed[code] != undefined) return r(), timeout(_loadDcconDetail, 1); // proceed to next
     let json = await postDcconPackageDetail(code).catch(debug);
     if (!json) return r();
+    _processDcconData(json);
+    r(), timeout(_loadDcconDetail, 100);
+}
+
+let _processDcconData = (json) => {
     let packageName = json['info']['title'];
     let packageIdx = json['info']['package_idx'];
     let dccons = json['detail'];
@@ -819,8 +830,27 @@ let _loadDcconDetail = async () => {
     dcconSavedInfo[packageName] = packageInfo;
     let listImgCode = json['info']['list_img_path'];
     dcconSavedInfoImgCode[packageName] = listImgCode;
-    r(), timeout(_loadDcconDetail, 100);
-}
+
+    if (!dcconPreload()[packageIdx]) {
+        let detail = [];
+        for (let dccon of dccons) {
+            detail.push({
+                title: dccon['title'],
+                path: dccon['path'],
+            });
+        }
+        dcconPreload()[packageIdx] = {
+            info: {
+                title: packageName,
+                package_idx: packageIdx,
+                list_img_path: listImgCode,
+            },
+            detail: detail,
+        };
+        applyOption('dccon', dcconPreload());
+    }
+};
+
 let loadDcconDetail = (code) => {
     let { r, p } = initPromise();
     pending.push([code, r]);
@@ -1038,7 +1068,7 @@ let replaceEmbed = (string) => {
     let matches = string.matchAll(/<embed src="([^\?"]*)([^"]*)"([^>]+)>/g);
     for (let match of matches) {
         if (DEBUG) debug('replacing', string);
-        string = string.r(match[0], `<iframe src="${match[1] + (match[2] ? match[2] + '&' : '?')}enablejsapi=1"${match[3]}></iframe>`);
+        string = string.r(match[0], `<iframe src="${match[1] + (match[2] ? match[2] + '&' : '?')}enablejsapi=1"${match[3]} sandbox="allow-same-origin allow-scripts"></iframe>`);
         if (DEBUG) debug('replaced', string);
     }
     return string;
@@ -1053,6 +1083,8 @@ let replaceImage = (string, id) => {
         let replaced = imageMatch;
         let src = match[2];
         if (DEBUG) debug('src', src);
+
+        if (/class="d"/.test(imageMatch)) continue;
         
         let classMatch = imageMatch.match(/class="([^"]+)"/);
         if (classMatch) {
@@ -1066,7 +1098,7 @@ let replaceImage = (string, id) => {
             // if there is onclick func ... it means it has original image
             replaced = replaced.r(clickMatch[0], `onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(clickMatch[1]) }',id:'${ id }'}))" data-osrc="${ getDownloadUrl(clickMatch[1]) }"`);
         } else {
-            replaced = replaced.r('>', '') + ` onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(src) }',id:'${ id }'}))" data-osrc="${ getDownloadUrl(src) }">`;
+            replaced = replaced.r('>', '') + ` onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(src) }',id:'${ id }'}))" data-osrc="${ getDownloadUrl(src) }" draggable="false">`;
         }
         string = string.r(imageMatch, replaced);
     }
@@ -1077,11 +1109,11 @@ let setIntervalIndex = (index) => interval = intervalPresets[index];
 
 let updateFormData = (html, data) => {
     for (let id in data) {
-        let value = html[getElementById](id);
+        let value = html[querySelector]('#' + id);
         if (value) data[id] = value.value;
         else {
-            value = html[getElementsByName](id);
-            if (value && value.length) data[id] = value[0].value;
+            value = html[querySelector](`[name='${ id }']`);
+            if (value) data[id] = value.value;
         }
     }
     if (!gallType && formData._GALLTYPE_) gallType = formData._GALLTYPE_;
@@ -1148,12 +1180,12 @@ let saveOptions = (override) => {
     let string = JSON.stringify(override ?? _saveData);
     storage?.setItem(appName, string);
 };
-let _applyOption = (optionKey, bool) => {
-    _saveData[optionKey] = bool;
-    onApplyFunc[optionKey]?.(bool);
+let _applyOption = (optionKey, value) => {
+    _saveData[optionKey] = value;
+    onApplyFunc[optionKey]?.(value);
 };
-let applyOption = (optionKey, bool) => {
-    _applyOption(optionKey, bool);
+let applyOption = (optionKey, value) => {
+    _applyOption(optionKey, value);
     saveOptions();
 };
 let getOption = (optionKey) => {
@@ -1163,14 +1195,14 @@ let loadOptions = () => {
     let string = storage?.getItem(appName) ?? '';
     if (!string) return;
     _saveData = JSON.parse(string);
-    for (let key in _saveData) applyOption(key, _saveData[key]);
+    for (let key in _saveData) _applyOption(key, _saveData[key]);
 };
 let clearSaveData = () => saveOptions({});
 // 로드는 초기화 마지막 순서로
 
 (async() => {
     let html = await getAsDocument(getListUrl()).catch(debug);
-    let loginBox = html[getElementById]('login_box');
+    let loginBox = html[querySelector]('#login_box');
     if (loginBox) {
         let loginButtons = loginBox[getElementsByClassName]('btn_inout');
         if (loginButtons.length > 0) {
@@ -1230,8 +1262,7 @@ createElement('link', head, {
     href: https + 'fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'
 });
 
-let sumzzal;
-import("https://raw.githubusercontent.com/Joh1ah/dclivechat/dev/sumzzal.js").then((module) => sumzzal = module, sumzzal.test());
+if (bMobileDevice) initCaptchaV3();
 
 //#endregion
 
@@ -1323,8 +1354,8 @@ let openModal = (info) => {
 }
 let openAlert = (desc) => openModal({ desc: desc });
 
-let openImages = (targetSrc, id) => {
-    let postContent = document[getElementById](id);
+let openImage = (targetSrc, id) => {
+    let postContent = document[querySelector]('#' + id);
     if (!postContent) return;
     let imgs = postContent[getElementsByClassName]('img');
     let list = [];
@@ -1349,20 +1380,22 @@ let openImages = (targetSrc, id) => {
         renderOverlay(true);
     }}, 'ipvs');
     let src = () => list[index];
-    curImg = createElement('img', container, { src: src(), [onclick]: () => {
+    curImg = createElement('img', container, { src: src(), draggable: false, [onclick]: () => {
         clicked = true;
         request(() => clicked = false);
-    } }, 'ipv');
+    }}, 'ipv');
+
     let controls = createElement(divString, container, 'fr');
     let download = createElement('a', controls, { [onclick]: () => {
         clicked = true;
-        let temp = createElement('a', null, { href: src(), download: '' });
+        let temp = createElement('a', null, { href: curImg.src, download: '' });
         temp.click();
         temp.remove();
         request(() => clicked = false);
     }}, 'b');
     createIcon(download, 'download');
     createElement(spanString, download, { innerText: str_download });
+
     renderOverlay();
 }
 
@@ -1382,6 +1415,21 @@ let videoContainer = createElement(divString, main, 'video');
 // 마도 지원 - 20230119
 let menu = createElement(divString, videoContainer, 'menu');
 let videoMain = createElement(divString, videoContainer, 'main');
+
+let menuExpanded = true;
+let menuExpandButton;
+let toggleMenu = () => {
+    menuExpanded = !menuExpanded;
+    if (menuExpanded) {
+        removeClass(menu, 'e');
+        menuExpandButton[innerText] = 'expand_less';
+    } else {
+        addClass(menu, 'e');
+        menuExpandButton[innerText] = 'expand_more';
+    }
+};
+
+createElement(divString, menu, { [onclick]: toggleMenu }, 'stretch');
 
 let addVideoButton = createElement('a', menu, { [onclick]: () => {
     addClass(videoMain, 'go');
@@ -1413,6 +1461,8 @@ let closeAllVideosButton = createElement('a', menu, 'b', disabled);
 createIcon(closeAllVideosButton, 'close');
 createElement(spanString, closeAllVideosButton, { [innerText]: str_closeAll });
 
+menuExpandButton = createIcon(createElement('a', menu, { [onclick]: toggleMenu }, 'b.fix-tl'), 'expand_less');
+
 let videoInputContainer = createElement(divString, videoMain, 'p.fr');
 let videoInputCloseButton = createElement('a', videoInputContainer, {
     [onclick]: () => {
@@ -1437,14 +1487,15 @@ let videoDivs = [];
 let renderRow = () => {
     if (!bMado) {
         let newLength = Math.min(videoDivs.length, 1);
-        setStyleVariable('--mh', '0px');
+        // setStyleVariable('--mh', '0px');
+        addClass(menu, hidden);
         loadedVideoUrls.length = newLength;
         for (let i = 1; i < videoDivs.length; i++) {
             videoDivs[i]?.remove();
         }
         videoDivs.length = newLength;
         if (relocating) relocateVideoButton.click();
-    } else setStyleVariable('--mh', '50px');
+    } else removeClass(menu, hidden); // setStyleVariable('--mh', '50px');
     addClass(relocateVideoButton, disabled);
     
     removeClass(relocateVideoButton, '.t');
@@ -1499,6 +1550,7 @@ let addVideo = (url) => {
     if (!url) return openAlert(str_noValidUrl);
     if (url == 'show log') return removeClass(logDiv, hidden);
     if (url == 'clear options') return clearSaveData();
+    if (url == 'show options') return debug(_saveData);
     if (!/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/.test(url))
         return openAlert(str_noValidUrl);
     _addVideo(url);
@@ -1534,10 +1586,10 @@ let openLink = (string) => {
 };
 
 let onImageError = (videoId) => {
-    let videoElement = doc[getElementById](videoId).parentNode;
+    let videoElement = doc[querySelector]('#' + videoId).parentNode;
     let bDccon = videoElement.classList.contains('d');
     let src = videoElement.getAttribute('data-src');
-    let imageElement = createElement('img', null, { src: src }, bDccon ? 'd' : '_');
+    let imageElement = createElement('img', null, { src: src, draggable: false }, bDccon ? 'd' : '_');
     if (!bDccon) imageElement[onclick] = () => onImageClick(src);
     videoElement.insertAdjacentElement('beforebegin', imageElement);
     addClass(videoElement, hidden);
@@ -1548,7 +1600,7 @@ onmessage = (ev) => {
     if (json) {
         if (json.type == onImageErrorFuncName) onImageError(json.id);
         else if (json.type == openLinkFuncName) openLink(json.url);
-        else if (json.type == onImageClickFuncName) openImages(json.src, json.id);
+        else if (json.type == onImageClickFuncName) openImage(json.src, json.id);
     }
 }
 
@@ -1581,7 +1633,7 @@ let draggingIndex = () => videoDivs.indexOf(draggingDiv);
 let draggingUrl = '';
 let moving = false;
 let offsetX = 0, offsetY = 0;
-let addVideoIframe = (url, options = null) => {
+let addVideoIframe = (url, options = {}) => {
     videoInput.value = '';
     if (loadedVideoUrls.includes(url)) {
         let div = videoDivs[loadedVideoUrls.indexOf(url)];
@@ -1662,6 +1714,7 @@ let addVideoIframe = (url, options = null) => {
         
     }, 'grab.fr');
     createIcon(videoDrag, 'drag_indicator');
+    options.sandbox = 'allow-same-origin allow-scripts'; // v2.1.0-20230202
     let video = createElement('iframe', videoDiv, options);
     renderRow();
     video.src = url;
@@ -1736,7 +1789,7 @@ let renderNotify = () => {
         notifyCountSpan[innerText] = notificationList.length < 10 ? notificationList.length : '9+';
     }
 };
-let getNotificationKey = (postNum, commentNum) => postNum + '_' + commentNum;
+let getNotificationKey = (postNum, commentNum) => 'n' + postNum + '_' + commentNum;
 let checkAddNotification = (postNum, commentNum, commentDiv = null) => {
     if (!listeningPost[postNum]) {
         if (DEBUG) debug('post', postNum, 'is not my post');
@@ -1970,8 +2023,9 @@ let newLine = async (postData, bNow = false) => {
                 for (let iframe of iframes) {
                     iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":[]}', '*');
                 }
+                removeClass(line, 'open');
                 timeout(() => {
-                    removeClass(line, 'open');
+                    // removeClass(line, 'open');
                     pullDown();
                 }, 500);
                 pullDown();
@@ -2255,7 +2309,7 @@ let replyingNameSpan = createElement(spanString, replyingTab, 'name');
 let replyingTypeIcon = createIcon(replyingTab, 'more_horiz', hidden);
 let replyingTypeNameSpan = createElement(spanString, replyingTab, 'name', hidden);
 let replyingToSpan = createElement(spanString, replyingTab, { [innerText]: str_replyTo });
-createIcon(createElement('a', replyingTab, { [onclick]: () => setTarget(0) }, 'close'), 'cancel');
+// createIcon(createElement('a', replyingTab, { [onclick]: () => setTarget(0) }, 'close'), 'cancel');
 
 //#endregion
 
@@ -2300,6 +2354,7 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
         lastTargetButtonSpan[innerText] = str_writeComment;
         removeClass(lastTargetButtonSpan, 'f-white');
         addClass(replyInfoContainer, hidden);
+        removeClass(chatViewport, 'r');
         addClass(replyingTypeIcon, hidden);
         addClass(replyingTypeNameSpan, hidden);
     }
@@ -2313,6 +2368,7 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
             addClass(submit, disabled);
             if (!bLogin) addClass(loginInfoContainer, hidden);
         }
+        removeClass(chatInputContainer, 'wr');
         input[placeholder] = str_placeholderMessage;
         lastTargetDiv = null;
         lastTargetButtonSpan = null;
@@ -2349,6 +2405,7 @@ setTarget = (num, tDiv, tButton, tComment = null, tCommentNum = 0, tCommentWrite
             addClass(tButton, 'f-white');
         }
         removeClass(replyInfoContainer, hidden);
+        addClass(chatViewport, 'r');
         lastTargetDiv = tDiv;
         lastTargetButtonSpan = tButton;
         lastTargetComment = tComment ?? null;
@@ -2387,18 +2444,18 @@ let dcconPage =
 // 패키지 정보가 주어지면 
 onPackageDetail = async (packageName, list, promise) => {
     let hash = await computeHashAsColor(packageName).catch(debug);
-    let id = hash.substring(1);
+    let id = 'dc' + hash.substring(1);
     let linkImage = null;
 
     // make a package page
     let entry = createElement(divString, null, 'package');
-    let existing = doc[getElementById](id);
+    let existing = doc[querySelector]('#' + id);
     if (existing) {
         dcconPage.replaceChild(entry, existing);
     } else {
         dcconPage.appendChild(entry);
         // make a link in list
-        let link = createElement('a', listPage, { href: hash, [onclick]: () => {
+        let link = createElement('a', listPage, { href: '#' + id, [onclick]: () => {
             input.focus();
             scrollToTop();
         } });
@@ -2442,8 +2499,12 @@ onPackageDetail = async (packageName, list, promise) => {
 let populatePackage = async (target) => {
     await loadDcconList(target).catch(debug);
 }
-populatePackage('recent');
-populatePackage('icon');
+
+onApplyFunc['dccon'] = (infos) => {
+    for (let packageName in infos) {
+        _processDcconData(infos[packageName]);
+    }
+}
 
 let panelHidden = true;
 let togglePanel = () => {
@@ -2592,7 +2653,13 @@ let upload = createElement('a', chatInputContainerFloat, {
 
 // 드래그 앤 드롭 지원
 let c = 0;
-ondragenter = (ev) => {
+ondragenter = async (ev) => {
+    for (let item of ev.dataTransfer.items) {
+        if (item.type.split('/')[0] == 'image') {
+            // item.getAsFile();
+        }
+    }
+
     if (ev.dataTransfer && ev.dataTransfer.files) {
         let file = ev.dataTransfer.files[0];
         if (!file.type || file.type.split('/')[0] != 'image') return;
@@ -2601,11 +2668,9 @@ ondragenter = (ev) => {
 }
 dropArea.ondragenter = (ev) => {
     ev.preventDefault();
-    c++;
 }
 dropArea.ondragover = (ev) => ev.preventDefault();
 dropArea.ondragleave = () => {
-    c--;
     request(() => removeClass(dropArea, 'drag'));
 }
 
@@ -2797,7 +2862,6 @@ let getPostContent = async (num, bForce = false) => {
         num: num,
         name: '',
         text: str_nullContent,
-        document: null,
         write: null,
         esno: '',
         string: '',
@@ -2806,23 +2870,27 @@ let getPostContent = async (num, bForce = false) => {
     let parsed = parseHtml(html);
     if (!parsed) return contentData;
 
+    let returnFunc = () => {
+        parsed.remove();
+        return contentData;
+    };
+
     // check captcha
-    if (parsed[getElementById]('code_' + num)) bCaptchaComment = true;
+    if (parsed[querySelector]('#code_' + num)) bCaptchaComment = true;
     else bCaptchaComment = false;
 
-    contentData.document = parsed;
     let writeDivs = parsed[getElementsByClassName]('write_div');
-    if (!writeDivs.length) return contentData;
-    let head = parsed[querySelector]('.gallview_head');
-    if (!head) return contentData;
-    let writer = head[querySelector]('.gall_writer');
-    if (!writer) return contentData;
-    contentData.name = writer.getAttribute('data-nick');
+    if (!writeDivs.length) return returnFunc();
     let writeDiv = writeDivs[0];
+    let head = parsed[querySelector]('.gallview_head');
+    if (!head) return returnFunc();
+    let writer = head[querySelector]('.gall_writer');
+    if (!writer) return returnFunc();
+    contentData.name = writer.getAttribute('data-nick');
     contentData.write = writeDiv;
     contentData.text = replaceImage(replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML)))), 'pc-' + num);
-    let esno = parsed[getElementsByName]('e_s_n_o');
-    if (esno.length) contentData.esno = esno[0].value;
+    let esno = parsed[querySelector]("[name='e_s_n_o']");
+    if (esno) contentData.esno = esno.value;
     contentData.string = getSecretString(html);
     postContentDatas[num] = contentData;
 
@@ -2844,7 +2912,7 @@ let getPostContent = async (num, bForce = false) => {
     commentFormData.service_code = getSecondServiceCode(commentFormData.service_code, contentData.string);
     commentFormDatas[num] = commentFormData;
 
-    return contentData;
+    return returnFunc();
 }
 
 let _getPostComment = async (num, postData, commentData) => {
@@ -3007,6 +3075,8 @@ let updateList = async (force = false) => {
         postDatas.push(postData);
     }
 
+    gall.remove();
+
     if (postDatas.length == 0) return;
     postDatas = postDatas.sort((a, b) => a.num - b.num);
     let lastNumCur = 0;
@@ -3089,20 +3159,26 @@ refreshWriteSession = async() => {
     let html = await getAsText(getWriteUrl()).catch(debug);
     let parsed = parseHtml(html);
     if (!parsed) return onWritingBlocked();
-    let write = parsed[getElementById]('write');
-    if (!write) return onWritingBlocked();
+    let write = parsed[querySelector]('#write');
+    if (!write) {
+        parsed.remove();
+        return onWritingBlocked();
+    }
     onWritingBlocked(false);
     updateFormData(parsed, formData);
     // find service_code validation serial
     _secret = getSecretString(html);
-    bCaptcha = parsed[getElementById]('code') && true;
+    bCaptcha = parsed[querySelector]('#code') && true;
     if (bMini) {
         formData.headtext = 0; // 말머리 일반
         let key = bLogin ? 'nickname' : 'name';
-        let nickname = parsed[getElementById](key);
-        if (nickname) anonymousNickname = nickname.value;
+        let nickname = parsed[querySelector]('#' + key);
+        if (nickname) {
+            anonymousNickname = nickname.value;
+        }
         else anonymousNickname = '';
     }
+    parsed.remove();
     renderInputCaptcha();
     renderInputNickname();
     pullDown(true);
@@ -3110,8 +3186,14 @@ refreshWriteSession = async() => {
 let falseString = (s) => 'false||' + s;
 let makeDcconContent = (url, dcconName) => `<img class="written_dccon" src="${url}" conalt="${dcconName}" alt="${dcconName}" con_alt="${dcconName}" title="${dcconName}">`;
 let lastWrite = 0;
+let getEmbed = async (url) => {
+    let res = await postWrite(host + 'api/ogp', { url: url });
+    if (!res) return `<p><a href="${url}" target="_blank">${url}</a></p>`;
+    let json = JSON.parse(res);
+    if (!json.result) return `<p><a href="${url}" target="_blank">${url}</a></p>`;
+    return `{{_OG_START::${url}^#^${json.og_title}^#^${json.og_description}^#^${json.og_image}::OG_END_}}`;
+}
 let writePost = async (title, content) => {
-    // get second block_key
     formData.subject = encode(title);
     let additionalFormData = {};
     if (!bLogin) {
@@ -3161,19 +3243,21 @@ let writePost = async (title, content) => {
     if (useLinkInContent && loadedVideoUrls.length) {
         for (let i = 0; i < loadedVideoUrls.length; i++) {
             let videoUrl = loadedVideoUrls[i];
+            
             let matchYoutube = videoUrl.match(regexYoutube);
             let matchTwitch = videoUrl.match(regexTwitch);
-            let videoId;
+            let videoId, url;
             if (matchYoutube) { // if youtube
                 videoId = matchYoutube[2];
-                if (i == 0) linkContent += `<p><div class="yt_thum_box"><div class="yt_movie"><embed src="https://www.youtube.com/v/${videoId}?version=3" type="application/x-shockwave-flash" width="560" height="315" allowfullscreen="true"></div><a class="yt_link" href="https://youtu.be/${videoId}" target="_blank">https://youtu.be/${videoId}</a></div><p>`;
-                else linkContent += `<p><a href="https://youtu.be/${videoId}">https://youtu.be/${videoId}</a></p>`;
+                url = 'https://youtu.be/' + videoId;
+                if (i == 0) linkContent += `<p><span class="og-url" style="color:#3b4890" <div=""></span></p><div class="yt_movie"><embed src="https://www.youtube.com/v/${videoId}?version=3" type="application/x-shockwave-flash" width="560" height="315" allowfullscreen="true"></div><a class="yt_link" href="${url}" target="_blank">${url}</a></div>`;
             } else if (matchTwitch) {
                 videoId = matchTwitch[2];
-                linkContent += `<p><a href="https://www.twitch.tv/${videoId}">https://www.twitch.tv/${videoId}</a></p>`;
+                url = 'https://www.twitch.tv/' + videoId;
             } else {
-                linkContent += `<p><a href="${videoUrl}">${videoUrl}</a></p>`;
+                url = videoUrl;
             }
+            linkContent += await getEmbed(url);
         }
     }
     if (linkContent) linkContent += str_lineBreak;
@@ -3197,7 +3281,8 @@ let writePost = async (title, content) => {
         let url = getDcconUrl(packageName, dcconName);
         if (url) content = content.r(dcconString, makeDcconContent(url, dcconName));
     }
-    lastData.memo = encode(imageContent + linkContent + str_lineBreak + /* dcconContent + */ content);
+
+    lastData.memo = encode(imageContent + linkContent + str_lineBreak + dcconContent + content).r(/%20/g, '+');
     let res = await postWrite(articleSubmit, formData, additionalFormData, lastData).catch(debug);
     if (res) {
         let splits = res.split('||');
@@ -3354,6 +3439,8 @@ submit.onclick = async() => {
 //#endregion
 
 loadOptions();
+populatePackage('recent');
+populatePackage('icon');
 request(() => removeClass(body, hidden));
 debug('INIT done');
 })().catch(reason => console.log(reason));
