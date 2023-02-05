@@ -554,8 +554,10 @@ let bytes = (size) => {
 
 let parseHtml = (text) => {
     try {
-        let doc = new DOMParser().parseFromString(text, 'text/html').documentElement;
+        let temp = createElement('div', null, { innerHTML: text.r('<html', '<document').r('</html>', '</document>') });
+        let doc = temp[getElementsByTagName]('document')[0];
         detach(doc);
+        temp.remove();
         return doc;
     } catch (e) {
         debug(e);
@@ -1221,6 +1223,7 @@ let clearSaveData = () => saveOptions({});
             bUserFix = testFix(img.src);
         }
     }
+    html.remove();
     onLoginChecked?.();
 })();
 
@@ -1892,7 +1895,8 @@ let checkMaxPost = () => {
         let childNode = nodes[0];
         let removed = childNode[getElementsByClassName]('removed');
         if (removed && removed.length) removed[0].value = true;
-        chatPage.removeChild(childNode);
+        childNode.remove();
+        // chatPage.removeChild(childNode);
         pullDown(true);
     }
 }
