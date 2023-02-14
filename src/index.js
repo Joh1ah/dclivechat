@@ -82,8 +82,6 @@ let str_nullCode = decode('64-E67CwIOuwqeyngCDsvZTrk5zrpbwg7J6F66Cl7ZWY7IS47JqUL
 let str_noGalleryUrl = decode('7J20IOq4sOuKpeydgCBEQ-yduOyCrOydtOuTnCDqsKTrn6zrpqzsl5DshJzrp4wg7IKs7Jqp7ZWgIOyImCDsnojsirXri4jri6Qu');
 /** "이 기능은 글 목록 페이지에서만 사용할 수 있습니다." */
 let str_noGalleryPageUrl = decode('7J20IOq4sOuKpeydgCDquIAg66qp66GdIO2OmOydtOyngOyXkOyEnOunjCDsgqzsmqntlaAg7IiYIOyeiOyKteuLiOuLpC4.');
-/** "미니 갤러리는 지원하지 않습니다." */
-// let str_noSupportMini = decode('66-464uIIOqwpOufrOumrOuKlCDsp4Dsm5DtlZjsp4Ag7JWK7Iq164uI64ukLg..');
 /** "PC버전 페이지에서 다시 시도해주세요." */
 let str_noSupportMobile = decode('UEPrsoTsoIQg7Y6Y7J207KeA7JeQ7IScIOuLpOyLnCDsi5zrj4TtlbTso7zshLjsmpQu');
 /** "로그아웃" */
@@ -110,8 +108,6 @@ let str_placeholderMessage = decode('66mU7Iuc7KeAIOuztOuCtOq4sA..');
 let str_placeholderReply = decode('64u16riAIOyeheugpQ..');
 /** "댓글 입력" */
 let str_placeholderComment = decode('64yT6riAIOyeheugpQ..');
-/** "디시콘 검색" */
-// let str_placeholderSearchDccon = decodeString('65SU7Iuc7L2YIOqygOyDiQ..');
 /** "생방송 채팅" */
 let str_chatHeader = decode('7IOd67Cp7IahIOyxhO2MhQ..');
 /** "스크롤해서 채팅이 멈췄습니다" */
@@ -136,10 +132,6 @@ let str_code = decode('7L2U65OcIOyeheugpQ..');
 let str_replyTo = decode('7JeQ6rKMIOuLteq4gA..');
 /** "에게 댓글" */
 let str_commentTo = decode('7JeQ6rKMIOuMk-q4gA..');
-/** "채팅 규칙" */
-// let str_chatRule = decode('7LGE7YyFIOq3nOy5mQ..');
-/** "네, 알겠습니다!" */
-// let str_ruleConfirm = decode('64SkLCDslYzqsqDsirXri4jri6Qh');
 /** "댓글 쓰기" */
 let str_writeComment = decode('64yT6riAIOyTsOq4sA..');
 /** "새 댓글 쓰는 중" */
@@ -178,8 +170,6 @@ let str_nullContent = decode('7IKt7KCc65CY7JeI6rGw64KYIOyhtOyerO2VmOyngCDslYrrip
 let str_notice = decode('6rO17KeA');
 /** "설문" */
 let str_survey = decode('7ISk66y4');
-/** "라이브챗 규칙" */
-// let str_rulePostTitle = decode('65287J2067iM7LGXIOq3nOy5mQ..');
 /** "채팅방에 오신 것을 환영합니다!" */
 let str_greeting = decode('7LGE7YyF67Cp7JeQIOyYpOyLoCDqsoPsnYQg7ZmY7JiB7ZWp64uI64ukIQ..');
 /** "알 수 없는 오류" */
@@ -188,20 +178,6 @@ let str_error_generic = decode('7JWMIOyImCDsl4bripQg7Jik66WY');
 let str_error_blockKey = decode('7JWMIOyImCDsl4bripQg7Jik66WYIChibG9ja19rZXkp');
 /** "잘못된 요청입니다." */
 let stR_error_badRequest = decode('7J6Y66q765CcIOyalOyyreyeheuLiOuLpC4.');
-/** "트위치에서" */
-// let str_onTwitch = decode('7Yq47JyE7LmY7JeQ7ISc');
-/** `<p><div class="yt_thum_box"><div class="yt_movie"><embed src="https://www.youtube.com/v/` */
-// let str_linkYoutube_part_1 = decode('PHA-PGRpdiBjbGFzcz0ieXRfdGh1bV9ib3giPjxkaXYgY2xhc3M9Inl0X21vdmllIj48ZW1iZWQgc3JjPSJodHRwczovL3d3dy55b3V0dWJlLmNvbS92Lw..');
-/** `?version=3" type="application/x-shockwave-flash" width="560" height="315" allowfullscreen="true"></div><a class="yt_link" href="` */
-// let str_linkYoutube_part_2 = decode('P3ZlcnNpb249MyIgdHlwZT0iYXBwbGljYXRpb24veC1zaG9ja3dhdmUtZmxhc2giIHdpZHRoPSI1NjAiIGhlaWdodD0iMzE1IiBhbGxvd2Z1bGxzY3JlZW49InRydWUiPjwvZGl2PjxhIGNsYXNzPSJ5dF9saW5rIiBocmVmPSI.');
-/** `" target="_blank">` */
-// let str_linkYoutube_part_3 = decode('IiB0YXJnZXQ9Il9ibGFuayI-');
-/** `</a></div><p>` */
-// let str_linkYoutube_part_4 = decode('PC9hPjwvZGl2PjxwPg..');
-/** ` 시청 중: <a href="` */
-// let str_linkGeneral_part_2 = decode('IOyLnOyyrSDspJE6IDxhIGhyZWY9Ig..');
-/** "지금" */
-// let str_now = decode('7KeA6riI');s
 /** "이미지가 너무 큽니다." */
 let str_imageTooBig = decode('7J2066-47KeA6rCAIOuEiOustCDtgb3ri4jri6Qu');
 /** "이미지를 바꾸시겠습니까?" */
@@ -225,7 +201,7 @@ let str_notifyChatDisabled = decode('7LGE7YyF7J20IOu5hO2ZnOyEse2ZlOuQmOyXiOyKteu
 /** "이미 실행중입니다." */
 let str_runningAlready = decode('7J2066-4IOyLpO2WieykkeyeheuLiOuLpC4.');
 /** "이미지 첨부" */
-// let str_tooltip_upload = decode('7J2066-47KeAIOyyqOu2gA..');
+let str_tooltip_upload = decode('7J2066-47KeAIOyyqOu2gA..');
 /** "드래그 앤 드롭으로 이미지 올리기" */
 let str_dragAndDrop = decode('65Oc656Y6re4IOyVpCDrk5zroa3snLzroZwg7J2066-47KeAIOyYrOumrOq4sA..');
 /** "새로운 이미지로 변경" */
@@ -238,10 +214,6 @@ let str_chatDisabled = decode('7LGE7YyF7J20IOu5hO2ZnOyEse2ZlOuQnCDqsKTrn6zrpqzsn
 let str_blanks = decode('4oCA4oCB4oCE4oCF4oCG4oCH4oCI4oCJ4oCK');
 /** "댓글수 하이라이트" */
 let str_settings_commentHighlight = decode('64yT6riA7IiYIO2VmOydtOudvOydtO2KuA..');
-/** "현재 브라우저에서는 설정이 저장되지 않습니다." */
-// let str_noStorageSupport = decode('7ZiE7J6sIOu4jOudvOyasOyggOyXkOyEnOuKlCDshKTsoJXsnbQg7KCA7J6l65CY7KeAIOyViuyKteuLiOuLpC4.');
-/** "이미 시청중입니다." */
-// let str_watchingAlready = decode('7J2066-4IOyLnOyyreykkeyeheuLiOuLpC4.');
 /** "영상 추가" */
 let str_addVideo = decode('7JiB7IOBIOy2lOqwgA..');
 /** "배치 바꾸기" */
@@ -256,6 +228,8 @@ let str_askMado = decode('66qo67CU7J28IO2ZmOqyveyXkOyEnOuKlCDqtozsnqXtlZjsp4Ag7J
 let str_closeAll = decode('7KCE7LK0IOuLq-q4sA..');
 /** "다운로드" */
 let str_download = decode('64uk7Jq066Gc65Oc');
+/** "닫기" */
+let str_tooltip_close = decode('64ur6riw');
 
 //#endregion
 
@@ -271,7 +245,7 @@ let bMobileSafari = bMobileDevice && /Safari/i.test(navigator.userAgent);
 
 let intervalPresets = [ 4000, 2500 ];
 let minInterval = 2000; 
-let maxPost = 200;
+let maxPost = 100;
 let maxCommentOnPage = 20;
 let maxOpened = 5;
 let commentSignitureLength = 8;
@@ -1066,16 +1040,6 @@ let replaceLink = (string) => {
     return string;
 }
 
-let replaceEmbed = (string) => {
-    let matches = string.matchAll(/<embed src="([^\?"]*)([^"]*)"([^>]+)>/g);
-    for (let match of matches) {
-        if (DEBUG) debug('replacing', string);
-        string = string.r(match[0], `<iframe src="${match[1] + (match[2] ? match[2] + '&' : '?')}enablejsapi=1"${match[3]} sandbox="allow-same-origin allow-scripts"></iframe>`);
-        if (DEBUG) debug('replaced', string);
-    }
-    return string;
-}
-
 let getDownloadUrl = (id) => 'https://image.dcinside.com/viewimage.php?id=&no=' + id;
 
 let replaceImage = (string, id) => {
@@ -1326,20 +1290,17 @@ let renderOverlay = (bForce = false) => {
     else addClass(overlay, 'wait');
 }
 
-let openModal = (info) => {
-    let options = info.options ?? [{ text: str_confirm, [onclick]: (close) => close() }];
+let openModal = ({title, desc, options, close}) => {
+    if (!options) options = [{ text: str_confirm, [onclick]: (close) => close() }];
     let modal = createElement(divString, overlay, 'modal');
-    if (info.title) createElement(divString, modal, { [innerText]: info.title }, 'tt');
-    if (info.desc) createElement(divString, modal ,{ [innerText]: info.desc }, 'desc');
+    if (title) createElement(divString, modal, { [innerText]: title }, 'tt');
+    if (desc) createElement(divString, modal ,{ [innerText]: desc }, 'desc');
     let closeModal = () => {
         addClass(modal, hidden);
         modal.remove();
         renderOverlay();
     }
-    if (info.close) {
-        let close = createElement('a', modal, { [onclick]: closeModal }, 'b.close.abs-tr');
-        createIcon(close, 'close');
-    } 
+    if (close) createIcon(createElement('a', modal, { [onclick]: closeModal }, 'b.close.abs-tr'), 'close');
     let optionContainer = createElement(divString, modal, 'opts.fr');
     for (let option of options) {
         let bIcon = (option.icon != undefined);
@@ -1400,7 +1361,14 @@ let openImage = (targetSrc, id) => {
     createElement(spanString, download, { innerText: str_download });
 
     renderOverlay();
-}
+};
+
+let addTooltip = (element, { text, top = false }, ...classes) => {
+    addClass(element, 'has-tooltip');
+    let tooltip = createElement(divString, element, 'tooltip', top ? 'tp' : 'bt',  ...classes);
+    createElement(spanString, tooltip, { innerText: text });
+    return tooltip;
+};
 
 let main = createElement('main', body);
 
@@ -1427,6 +1395,7 @@ let toggleMenu = () => {
         removeClass(menu, 'e');
         menuExpandButton[innerText] = 'expand_less';
     } else {
+        if (relocating) relocateVideoButton.click();
         addClass(menu, 'e');
         menuExpandButton[innerText] = 'expand_more';
     }
@@ -1563,7 +1532,6 @@ let addVideo = (url) => {
 // 글 본문에 링크가 있다면
 // 영상 화면에 표시하는 전역 함수를 추가
 let openLink = (string) => {
-// doc[openLinkFuncName] = (string) => {
     let decoded = decodeURIComponent(string).r(/&amp;/g, '&');
     openModal({
         title: str_openUrlTitle,
@@ -1714,14 +1682,15 @@ let addVideoIframe = (url, options = {}) => {
                 element?.onmousemove?.();
             };
         },
-        
     }, 'grab.fr');
     createIcon(videoDrag, 'drag_indicator');
     options.sandbox = 'allow-same-origin allow-scripts'; // v2.1.0-20230202
     let video = createElement('iframe', videoDiv, options);
     renderRow();
     video.src = url;
-    createIcon(createElement('a', videoDiv, { [onclick]: () => removeVideoPlayer(url, videoDiv) }, 'close.b.abs-tr'), 'close');
+    let videoClose = createElement('a', videoDiv, { [onclick]: () => removeVideoPlayer(url, videoDiv) }, 'close.b.abs-tr');
+    createIcon(videoClose, 'close');
+    addTooltip(videoClose, { text: str_tooltip_close });
 }
 
 // 마지막에 시청하던 링크를 갤러리별로 저장 및 로드
@@ -1749,7 +1718,8 @@ let checkMaxOpened = () => {
 let chatContainer = createElement(divString, main, 'chat');
 let header = createElement(divString, chatContainer, 'hd');
 createElement(spanString, header, { [innerText]: str_chatHeader }, 'h');
-createIcon(createElement('a', header, { href: helpUrl, target: '_blank' }, 'help.b'), 'help');
+let help = createElement('a', header, { href: helpUrl, target: '_blank' }, 'help.b');
+createIcon(help, 'help');
 let chatViewport = createElement(divString, chatContainer, 'vp');
 let chatPage = createElement(divString, chatViewport, 'page');
 let chatBottomContainer = createElement(divString, chatContainer, 'cb-c');
@@ -1991,7 +1961,7 @@ let newLine = async (postData, bNow = false) => {
     
     // 글 본문
     if (num) {
-        let iframes = [];
+        // let iframes = [];
         titleDiv.id = getNotificationKey(num, 0);
         
         let postContent = createElement(divString, line, 'w.zero');
@@ -2014,6 +1984,10 @@ let newLine = async (postData, bNow = false) => {
             openedList.push(titleDiv);
             checkMaxOpened();
             renderCloseAllButton();
+
+            getPostContent(num).catch(debug).then(({text}) => {
+                postContentPage.innerHTML = text;
+            });
         };
 
         titleDiv.onclick = () => {
@@ -2023,28 +1997,19 @@ let newLine = async (postData, bNow = false) => {
             if (bHiddenPostContent) {
                 splice(openedList, titleDiv);
                 addClass(postContent, 'zero');
-                // 모든 유튜브 영상 중지
-                for (let iframe of iframes) {
-                    iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":[]}', '*');
-                }
                 removeClass(line, 'open');
                 timeout(() => {
-                    // removeClass(line, 'open');
                     pullDown();
                 }, 500);
+                while (postContentPage.lastChild) {
+                    postContentPage.lastChild.remove();
+                }
                 pullDown();
                 renderCloseAllButton();
                 return;
             };
             // 열 때
             onOpenPostContent();
-            if (postContentDatas[num] == undefined) {
-                getPostContent(num).catch(debug)
-                .then(({text}) => {
-                    postContentPage.innerHTML = text;
-                    iframes = postContentPage[getElementsByTagName]('iframe');
-                });
-            }
         };
         
         // 본문 아래 댓글
@@ -2058,7 +2023,6 @@ let newLine = async (postData, bNow = false) => {
         }, 'ex.sm.r');
         createIcon(postCommentShowMore, 'more_vert');
         let inputComment = createElement('a', postContent, {
-            // [innerText]: str_writeComment,
             [onclick]: () => {
                 if (targetPostNum == num) setTarget(0);
                 else setTarget(num, line, inputCommentSpan);
@@ -2185,7 +2149,6 @@ let newLine = async (postData, bNow = false) => {
             }
             let func = () => {
                 if (newCount == -1) newCount = postCommentCount[num] + 1;
-                // let oldCount = postCommentCount[num] ?? 0;
                 postCommentCount[num] = newCount;
                 let splited = splitNumber(newCount);
                 if (splited.length > 3) {
@@ -2654,16 +2617,11 @@ let askReplace = (onOk) => {
 let upload = createElement('a', chatInputContainerFloat, {
     [onclick]: () => askReplace(() => uploadInput.click()),
 }, 'up.b.abs-tl', disabled);
+addTooltip(upload, { text: str_tooltip_upload, top: true });
 
 // 드래그 앤 드롭 지원
 let c = 0;
 ondragenter = async (ev) => {
-    for (let item of ev.dataTransfer.items) {
-        if (item.type.split('/')[0] == 'image') {
-            // item.getAsFile();
-        }
-    }
-
     if (ev.dataTransfer && ev.dataTransfer.files) {
         let file = ev.dataTransfer.files[0];
         if (!file.type || file.type.split('/')[0] != 'image') return;
@@ -2708,7 +2666,7 @@ let toggleSettings, changeSettingsPage;
 
 let settingsPanel = createElement(divString, chatInputContainer, 'p.p-settings', hidden);
 createElement(spanString, createElement(divString, settingsPanel, 'hd'), { [innerText]: str_settings }, 'h');
-createIcon(createElement('a', settingsPanel, { [onclick]: () => toggleSettings() }, 'b.abs-tr'), 'close'); 
+createIcon(createElement('a', settingsPanel, { [onclick]: () => toggleSettings() }, 'b.abs-tr'), 'close');
 let settingsBack = createElement('a', settingsPanel, { [onclick]: () => changeSettingsPage() }, 'b.abs-tl', hidden);
 createIcon(settingsBack, 'navigate_before'); 
 let settingsPage = createElement(divString, settingsPanel);
@@ -2892,7 +2850,8 @@ let getPostContent = async (num, bForce = false) => {
     if (!writer) return returnFunc();
     contentData.name = writer.getAttribute('data-nick');
     contentData.write = writeDiv;
-    contentData.text = replaceImage(replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML)))), 'pc-' + num);
+    // contentData.text = replaceImage(replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML)))), 'pc-' + num);
+    contentData.text = replaceImage(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML))), 'pc-' + num);
     let esno = parsed[querySelector]("[name='e_s_n_o']");
     if (esno) contentData.esno = esno.value;
     contentData.string = getSecretString(html);

@@ -120,7 +120,7 @@ a, span {
     opacity: .2 !important;
 }
 
-.abs, .abs-tr, .abs-tl, .o, .modal {
+.abs, .abs-tr, .abs-r, .abs-tl, .o, .modal {
     position: absolute;
 }
 .o, .abs-tr, .abs-tl {
@@ -204,6 +204,31 @@ a, span {
         &.fo {
             animation: fade-out-shrink .2s;
         }
+    }
+}
+
+.has-tooltip {
+    &:hover .tooltip {
+        opacity: 1;
+    }
+    .tooltip {
+        pointer-events: none;
+        position: absolute;
+        
+        background: $colorBackground;
+        opacity: 0;
+        transition: opacity .2s;
+        padding: 2px 4px;
+        box-shadow: $colorShadow 0 0 4px;
+        z-index: 1;
+        font-weight: normal;
+        white-space: nowrap;
+    }
+    .bt {
+        top: calc(100% + 6px);
+    }
+    .tp {
+        bottom: calc(100% + 6px);
     }
 }
 
@@ -330,7 +355,7 @@ input, textarea {
 }
 
 // rounded
-input, textarea, .b, .r, .p, .sb, .modal {
+input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
     border-radius: 4px;
 }
 
@@ -349,9 +374,15 @@ input, textarea, .b, .r, .p, .sb, .modal {
     }
 }
 
+.p, .modal {
+    >.b.abs-tr {
+        margin: 2px;
+    }
+}
+
 .tab {
     display: flex;
-    background: $colorBackground;
+    // background: $colorBackground;
     border-radius: 4px 4px 0 0;
     z-index: 1;
     min-height: 1.2em;
@@ -920,7 +951,6 @@ $inputHeight: 100px;
 
 .li-c, .ci-c {
     z-index: 2;
-    background: $colorBackground;
 }
 
 .hd {
@@ -935,6 +965,9 @@ $inputHeight: 100px;
         position: absolute;
         >span {
             color: $colorBackgroundLight;
+        }
+        &:hover>span {
+            color: $colorForeground;
         }
     }
 }
