@@ -4,7 +4,7 @@
 
 <img src="https://nstatic.dcinside.com/dc/w/images/logo_icon.ico" style="width:1em;height:1em"> [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.1.3-20230724`
+최신 버전: `2.1.3-20230904`
 
 <br>
 
@@ -45,18 +45,19 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 * 타 사이트에서의 시청이 금지된 영상은 볼 수 없습니다. (유튜브 멤버십 한정 방송 등)<br>단, 영상 링크는 정상적으로 추가됩니다.
 ### <i>소스코드를 보고싶어요</i>
 * [index.js](https://github.com/Joh1ah/dclivechat/blob/main/src/index.js)와 [style.scss](https://github.com/Joh1ah/dclivechat/blob/main/src/style.scss)를 확인해주세요.
-* 빌드된 버전은 [최신 릴리스](https://github.com/Joh1ah/dclivechat/releases)에서 찾아볼 수 있습니다.
+* 빌드된 각 버전은 [최신 릴리스](https://github.com/Joh1ah/dclivechat/releases)에서 찾아볼 수 있습니다.
 
 <br>
 
 ## 주의사항
-* 이 프로젝트는 공식이 아니며 사용 중 일어나는 모든 문제의 책임은 사용자에게 있습니다.
+* 이 프로젝트는 실험적 기능을 포함하고 있으며 사용 중 일어나는 모든 문제의 책임은 사용자에게 있습니다.
 
 <br>
 
 ## Changelog
-v2.1.3-20230724
+v2.1.3-20230904
 * 최초 실행 시 안내사항 표시
+* 모바일 채팅창 오버스크롤 문제 수정
 * 반응형 UI 개선
 * 브라우저 호환성 개선
 

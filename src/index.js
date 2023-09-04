@@ -1248,9 +1248,7 @@ logDiv = createElement(divString, body, 'log', hidden);
  * 뷰포트에는 포함되지만 실제로 표시되지는 않는 공간이 있음
  */
 /**
- * NOTE: -  20230904
- * 
- * svw, svh 적용으로 더 이상 필요없어짐
+ * NOTE: svw, svh 적용으로 더 이상 필요없어짐
  */
 // let fixedBottom = createElement(divString, body, 'x');
 // let setMarginBottom = (num) => setStyleVariable('--mb', num + 'px');
@@ -3409,6 +3407,20 @@ submit.onclick = async() => {
 loadOptions();
 populatePackage('recent');
 populatePackage('icon');
+
+// 업데이트 및 최초실행 안내창
+let lastVersion = getOption('version');
+if (lastVersion !== VERSION) {
+    //TODO
+}
+if (lastVersion === null) {
+    openModal({
+        title: '반가워요!',
+        desc: '쉬프트+엔터로 글 내용을 적을 수 있어요.\n피드백 항상 감사합니다!',
+    });
+}
+applyOption('version', VERSION);
+
 request(() => removeClass(body, hidden));
 debug('INIT done');
 })().catch(reason => console.log(reason));

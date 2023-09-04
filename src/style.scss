@@ -622,6 +622,7 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
     width: 100%;
     height: 100%;
     overflow-y: scroll;
+    overscroll-behavior: none;
     justify-content: flex-start;
     align-items: flex-start;
 
