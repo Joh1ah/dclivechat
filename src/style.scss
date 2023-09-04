@@ -49,7 +49,7 @@ body, button, input, select, table, textarea, * {
 }
 
 html {
-    min-height: 100vh;
+    min-height: 100svh;
 }
 body {
     // color
@@ -66,7 +66,7 @@ body {
 
     overflow: hidden;
     background: $colorBackground;
-    height: 100vh;
+    height: 100svh;
     letter-spacing: .02em;
     font-size: var(--fs);
 }
@@ -145,8 +145,8 @@ a, span {
 }
 
 .o {
-    width: 100vw;
-    height: 100vh;
+    width: 100svw;
+    height: 100svh;
     z-index: 3;
     pointer-events: none;
     opacity: 0;
@@ -194,13 +194,13 @@ a, span {
 }
 
 .ipvs {
-    width: 100vw;
-    height: 100vh;
-    margin-bottom: var(--mb);
+    width: 100svw;
+    height: 100svh;
+    // margin-bottom: var(--mb);
     >.ipv {
         animation: fade-in-grow .2s;
-        max-height: calc(90vh - 30px);
-        max-width: 90vw;
+        max-height: calc(90svh - 30px);
+        max-width: 90svw;
         &.fo {
             animation: fade-out-shrink .2s;
         }
@@ -330,7 +330,7 @@ a, span {
     position: fixed;
     top: 0;
     z-index: 4;
-    width: 100vw;
+    width: 100svw;
     align-items: flex-start;
     p {
         text-align: left;
@@ -645,10 +645,10 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
     }
 }
 
-.x {
-    position: fixed;
-    bottom: 0;
-}
+// .x {
+//     position: fixed;
+//     bottom: 0;
+// }
 
 video.d, img.d {
     width: var(--ds);
@@ -796,7 +796,7 @@ main {
     --cw: 340px;
     >* {
         position: relative;
-        height: 100vh;
+        height: 100svh;
     }
 }
 
@@ -932,17 +932,18 @@ iframe {
 }
 
 main.co {
-    --cw: 100vw;
+    --cw: 100svw;
     >.video {
         display: none !important;
         visibility: collapse !important;
     }
     >.chat {
-        height: calc(100vh - var(--mb)) ;
+        // height: calc(100vh - var(--mb)) ;
+        height: 100svh;
         top: 0;
     }
     .f>.i>textarea {
-        width: calc(100vw - 100px);
+        width: calc(100svw - 100px);
     }
 }
 
@@ -1136,7 +1137,7 @@ $inputHeight: 100px;
 }
 
 .p-dccon {
-    max-height: 50vh;
+    max-height: 50svh;
     height: 400px;
     display: grid;
     grid-template-columns: 1fr 40px;
@@ -1264,19 +1265,20 @@ $inputHeight: 100px;
         align-items: flex-start;
     }
     .video {
-        height: 60vw;
-        width: 100vw;
+        height: 60svw;
+        width: 100svw;
         position: fixed;
         top: 0;
     }
     .chat {
-        height: calc(100vh - var(--mb) - 60vw);
+        // height: calc(100vh - var(--mb) - 60vw);
+        height: calc(100svh - 60svw);
         min-height: 0;
-        width: 100vw;
+        width: 100svw;
         position: fixed;
-        top: 60vw;
+        top: 60svw;
         >* {
-            width: 100vw;
+            width: 100svw;
         }
         >.hd {
             display: none !important;
@@ -1297,7 +1299,7 @@ $inputHeight: 100px;
     }
     .f>.i {
         >textarea {
-            width: calc(100vw - 200px) !important;
+            width: calc(100svw - 200px) !important;
         }
     }
 }

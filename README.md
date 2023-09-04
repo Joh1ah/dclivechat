@@ -4,7 +4,7 @@
 
 <img src="https://nstatic.dcinside.com/dc/w/images/logo_icon.ico" style="width:1em;height:1em"> [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.1.2-20230214`
+최신 버전: `2.1.3-20230724`
 
 <br>
 
@@ -12,7 +12,7 @@
 1. PC 또는 모바일 브라우저에 아무 북마크나 추가하세요.
 2. 북마크 URL란에 아래 코드를 복사해 넣으세요.
 ```javascript
-javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>res.text().then(text=>eval(text))).catch(()=>alert('디시인사이드에서 다시 시도해주세요.'))})();
+javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>res.text().then(text=>eval(text))).catch(()=>alert('error'))})();
 ```
 3. 이제 이 북마크를 누르면 DC 라이브챗이 실행됩니다.
 
@@ -55,6 +55,11 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 <br>
 
 ## Changelog
+v2.1.3-20230724
+* 최초 실행 시 안내사항 표시
+* 반응형 UI 개선
+* 브라우저 호환성 개선
+
 v2.1.2-20230214
 * 이미지가 정상적으로 업로드되지 않던 문제 수정
 * 일부 버튼에 툴팁 추가

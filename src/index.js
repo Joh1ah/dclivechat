@@ -1247,23 +1247,28 @@ logDiv = createElement(divString, body, 'log', hidden);
  * ios 사파리 등 일부 브라우저는
  * 뷰포트에는 포함되지만 실제로 표시되지는 않는 공간이 있음
  */
-let fixedBottom = createElement(divString, body, 'x');
-let setMarginBottom = (num) => setStyleVariable('--mb', num + 'px');
-setMarginBottom(0);
-let requested = false;
-let onResize = () => {
-    let bottomY = fixedBottom.offsetTop;
-    let htmlHeight = body.clientHeight;
-    let marginBottom = htmlHeight - bottomY;
-    setMarginBottom(marginBottom);
-    pullDown(true);
-    requested = false;
-}
-onresize = () => {
-    if (requested) return;
-    requested = true;
-    request(onResize);
-};
+/**
+ * NOTE: -  20230904
+ * 
+ * svw, svh 적용으로 더 이상 필요없어짐
+ */
+// let fixedBottom = createElement(divString, body, 'x');
+// let setMarginBottom = (num) => setStyleVariable('--mb', num + 'px');
+// setMarginBottom(0);
+// let requested = false;
+// let onResize = () => {
+//     let bottomY = fixedBottom.offsetTop;
+//     let htmlHeight = body.clientHeight;
+//     let marginBottom = htmlHeight - bottomY;
+//     setMarginBottom(marginBottom);
+//     pullDown(true);
+//     requested = false;
+// }
+// onresize = () => {
+//     if (requested) return;
+//     requested = true;
+//     request(onResize);
+// };
 scrollToTop();
 
 // 첫 글 목록이 로드되기 전에 스크롤 고정이 풀리는 문제를 강제로 막음
@@ -1277,7 +1282,7 @@ timeout(() => {
         pullDown(true);
         bBlockPullDownChange = false;
     }, 400);
-    onResize();
+    // onResize();
 }, 400);
 
 let dropArea = createElement(divString, body, 'o');
