@@ -3688,7 +3688,7 @@ if (loadedVideoUrls.length !== 0) toggleMenu(false);
 // 업데이트 및 최초실행 안내창
 let lastVersion = getOption('version');
 if (typeof VERSION !== 'undefined') {
-    if (lastVersion !== VERSION || true) {
+    if (lastVersion !== VERSION) {
         openModal({
             title: str_update + ': ' + VERSION,
             desc: str_features + '<a href="https://joh1ah.github.io/dclivechat/change.log" target="_blank">' + str_changelog + '</a>',
