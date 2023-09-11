@@ -4,7 +4,7 @@
 
 <img src="https://nstatic.dcinside.com/dc/w/images/logo_icon.ico" style="width:1em;height:1em"> [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.1.2-20230214`
+최신 버전: `2.2.0-20230911`
 
 <br>
 
@@ -12,7 +12,7 @@
 1. PC 또는 모바일 브라우저에 아무 북마크나 추가하세요.
 2. 북마크 URL란에 아래 코드를 복사해 넣으세요.
 ```javascript
-javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>res.text().then(text=>eval(text))).catch(()=>alert('디시인사이드에서 다시 시도해주세요.'))})();
+javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>res.text().then(text=>eval(text))).catch(()=>alert('error'))})();
 ```
 3. 이제 이 북마크를 누르면 DC 라이브챗이 실행됩니다.
 
@@ -45,16 +45,27 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 * 타 사이트에서의 시청이 금지된 영상은 볼 수 없습니다. (유튜브 멤버십 한정 방송 등)<br>단, 영상 링크는 정상적으로 추가됩니다.
 ### <i>소스코드를 보고싶어요</i>
 * [index.js](https://github.com/Joh1ah/dclivechat/blob/main/src/index.js)와 [style.scss](https://github.com/Joh1ah/dclivechat/blob/main/src/style.scss)를 확인해주세요.
-* 빌드된 버전은 [최신 릴리스](https://github.com/Joh1ah/dclivechat/releases)에서 찾아볼 수 있습니다.
+* 빌드된 각 버전은 [최신 릴리스](https://github.com/Joh1ah/dclivechat/releases)에서 찾아볼 수 있습니다.
 
 <br>
 
 ## 주의사항
-* 이 프로젝트는 공식이 아니며 사용 중 일어나는 모든 문제의 책임은 사용자에게 있습니다.
+* 이 프로젝트는 실험적 기능을 포함하고 있으며 사용 중 일어나는 모든 문제의 책임은 사용자에게 있습니다.
 
 <br>
 
 ## Changelog
+v2.2.0-20230911
+* 자동짤방 및 여러 이미지 첨부 기능 추가
+* 꼬리말 수정 기능 추가
+* 프로토콜이 명시되지 않은 주소가 열리지 않는 문제 수정
+* 최초 실행 시 안내사항 표시
+* 모바일 채팅창 오버스크롤 문제 수정
+* 일부 환경에서 이미지 드롭이 되지 않는 문제 수정
+* 반응형 UI 개선
+* 브라우저 호환성 개선
+* 기타 UI 개선
+
 v2.1.2-20230214
 * 이미지가 정상적으로 업로드되지 않던 문제 수정
 * 일부 버튼에 툴팁 추가

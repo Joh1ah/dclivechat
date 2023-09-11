@@ -153,7 +153,7 @@ let str_settings_smallDccon = decode('65SU7Iuc7L2YIO2BrOq4sCDspITsnbTquLA.');
 /** "글 내용에 링크 추가" */
 let str_settings_appendLink = decode('6riAIOuCtOyaqeyXkCDrp4Htgawg7LaU6rCA');
 /** "짧은 채팅 지연시간" */
-let str_settings_shortLatency = decode('7Ken7J2AIOyxhO2MhSDsp4Dsl7Dsi5zqsIQ.');
+let str_settings_lowLatency = decode('7Ken7J2AIOyxhO2MhSDsp4Dsl7Dsi5zqsIQ.');
 /** "방송 없이 채팅창만 사용" */
 let str_settings_chatOnly = decode('67Cp7IahIOyXhuydtCDssYTtjIXssL3rp4wg7IKs7Jqp');
 /** "유동 로그인 숨기기" */
@@ -162,6 +162,12 @@ let str_settings_hideLogin = decode('7Jyg64-ZIOuhnOq3uOyduCDsiKjquLDquLA.');
 let str_settings_darkMode = decode('64uk7YGsIOuqqOuTnA..');
 /** "채팅 표시 방법" */
 let str_settings_chat = decode('7LGE7YyFIO2RnOyLnCDrsKnrspU.');
+/** "자동짤방 및 꼬리말" */
+let str_settings_write = decode('7J6Q64-Z7Kek67CpIOuwjyDqvKzrpqzrp5A.');
+/** "자동짤방 사용" */
+let str_settings_useZzal = decode('7J6Q64-Z7Kek67CpIOyCrOyaqQ..');
+/** "꼬리말 수정" */
+let str_settings_footer = decode('6rys66as66eQIOyImOyglQ..');
 /** "채팅" */
 let str_chat = decode('7LGE7YyF');
 /** "삭제되었거나 존재하지 않는 게시물입니다." */
@@ -181,11 +187,11 @@ let stR_error_badRequest = decode('7J6Y66q765CcIOyalOyyreyeheuLiOuLpC4.');
 /** "이미지가 너무 큽니다." */
 let str_imageTooBig = decode('7J2066-47KeA6rCAIOuEiOustCDtgb3ri4jri6Qu');
 /** "이미지를 바꾸시겠습니까?" */
-let str_replaceImage = decode('7J2066-47KeA66W8IOuwlOq-uOyLnOqyoOyKteuLiOq5jD8.');
+// let str_replaceImage = decode('7J2066-47KeA66W8IOuwlOq-uOyLnOqyoOyKteuLiOq5jD8.');
 /** "이미지는 한 번에 하나씩 올릴 수 있습니다." */
-let str_imageOver = decode('7J2066-47KeA64qUIO2VnCDrsojsl5Ag7ZWY64KY7JSpIOyYrOumtCDsiJgg7J6I7Iq164uI64ukLg..');
+// let str_imageOver = decode('7J2066-47KeA64qUIO2VnCDrsojsl5Ag7ZWY64KY7JSpIOyYrOumtCDsiJgg7J6I7Iq164uI64ukLg..');
 /** "바꾸기" */
-let str_replace = decode('67CU6r646riw');
+// let str_replace = decode('67CU6r646riw');
 /** "이미지 업로드에 실패했습니다." */
 let str_uploadFail = decode('7J2066-47KeAIOyXheuhnOuTnOyXkCDsi6TtjKjtlojsirXri4jri6Qu');
 /** "이미지 삭제에 실패했습니다." */
@@ -230,6 +236,18 @@ let str_closeAll = decode('7KCE7LK0IOuLq-q4sA..');
 let str_download = decode('64uk7Jq066Gc65Oc');
 /** "닫기" */
 let str_tooltip_close = decode('64ur6riw');
+/** "자동짤방 이미지를 삭제하시겠습니까?" */
+let str_askDeleteZzal = decode('7J6Q64-Z7Kek67CpIOydtOuvuOyngOulvCDsgq3soJztlZjsi5zqsqDsirXri4jquYw_');
+/** "이미지 업로드" */
+let str_uploadImage = decode('7J2066-47KeAIOyXheuhnOuTnA..');
+/** "자동짤방 업로드" */
+let str_uploadZzal = decode('7J6Q64-Z7Kek67CpIOyXheuhnOuTnA..');
+/** "버전 업데이트됨" */
+let str_update = decode('67KE7KCEIOyXheuNsOydtO2KuOuQqA..');
+/** "자동짤방과 꼬리말 기능을 추가했습니다!" */
+let str_features = decode('7J6Q64-Z7Kek67Cp6rO8IOq8rOumrOunkCDquLDriqXsnYQg7LaU6rCA7ZaI7Iq164uI64ukIQ..');
+/** "전체 변경사항 보기" */
+let str_changelog = decode('7KCE7LK0IOuzgOqyveyCrO2VrSDrs7TquLA.');
 
 //#endregion
 
@@ -571,11 +589,15 @@ let removeClass = (element, ...className) => {
     return element;
 };
 let scrollToTop = () => scrollTo(0, 0);
+let preventEnter = false;
 let enterAsClick = (input, submit, bShift = false) => {
     input.onkeypress = (ev) => {
-        if (ev.keyCode != 13) return;
+        debug(preventEnter, ev.key);
+        if (preventEnter) return;
+        if (ev.key != 'Enter') return;
         if (bMobileDevice && bShift) return;
         if (!bMobileDevice && bShift && ev.shiftKey) return;
+        debug('clicking');
         ev.preventDefault();
         submit.click();
         input.oninput?.();
@@ -1241,29 +1263,6 @@ if (bMobileDevice) initCaptchaV3();
 if (DEBUG) debug('ui');
 
 logDiv = createElement(divString, body, 'log', hidden);
-
-/**
- * NOTE:
- * ios 사파리 등 일부 브라우저는
- * 뷰포트에는 포함되지만 실제로 표시되지는 않는 공간이 있음
- */
-let fixedBottom = createElement(divString, body, 'x');
-let setMarginBottom = (num) => setStyleVariable('--mb', num + 'px');
-setMarginBottom(0);
-let requested = false;
-let onResize = () => {
-    let bottomY = fixedBottom.offsetTop;
-    let htmlHeight = body.clientHeight;
-    let marginBottom = htmlHeight - bottomY;
-    setMarginBottom(marginBottom);
-    pullDown(true);
-    requested = false;
-}
-onresize = () => {
-    if (requested) return;
-    requested = true;
-    request(onResize);
-};
 scrollToTop();
 
 // 첫 글 목록이 로드되기 전에 스크롤 고정이 풀리는 문제를 강제로 막음
@@ -1277,7 +1276,6 @@ timeout(() => {
         pullDown(true);
         bBlockPullDownChange = false;
     }, 400);
-    onResize();
 }, 400);
 
 let dropArea = createElement(divString, body, 'o');
@@ -1288,20 +1286,41 @@ let renderOverlay = (bForce = false) => {
     if (DEBUG) debug('render overlay', (bForce && overlay.childNodes.length == 1), overlay.childNodes.length);
     if ((bForce && overlay.childNodes.length == 1) || !overlay.lastChild) removeClass(overlay, 'wait');
     else addClass(overlay, 'wait');
+    if (overlay.childNodes.length === 0) preventEnter = false;
+    else preventEnter = true;
 }
+let enterUp = true;
+doc.addEventListener('keyup', (ev) => {
+    if (ev.key !== 'Enter') return;
+    enterUp = true;
+});
+doc.addEventListener('keypress', (ev) => {
+    if (!enterUp) return;
+    if (ev.key !== 'Enter') return;
+    if (!preventEnter) return;
+    overlay.lastChild.enter?.();
+    enterUp = false;
+});
 
-let openModal = ({title, desc, options, close}) => {
+let openModal = ({title, desc, options, close, html, input}) => {
     if (!options) options = [{ text: str_confirm, [onclick]: (close) => close() }];
     let modal = createElement(divString, overlay, 'modal');
     if (title) createElement(divString, modal, { [innerText]: title }, 'tt');
-    if (desc) createElement(divString, modal ,{ [innerText]: desc }, 'desc');
+    if (desc) {
+        if (html) createElement(divString, modal, { innerHTML: desc }, 'desc');
+        else createElement(divString, modal, { [innerText]: desc }, 'desc');
+    }
     let closeModal = () => {
         addClass(modal, hidden);
         modal.remove();
         renderOverlay();
     }
     if (close) createIcon(createElement('a', modal, { [onclick]: closeModal }, 'b.close.abs-tr'), 'close');
+    if (input !== undefined) {
+        modal.input = createElement('textarea', modal, { value: input });
+    }
     let optionContainer = createElement(divString, modal, 'opts.fr');
+    if (options.length === 1) options[0].enter = true;
     for (let option of options) {
         let bIcon = (option.icon != undefined);
         let optionDiv = createElement('a', optionContainer, {
@@ -1312,6 +1331,7 @@ let openModal = ({title, desc, options, close}) => {
             createIcon(optionDiv, option.icon);
             createElement(spanString, optionDiv, { [innerText]: option.text });
         }
+        if (option.enter) setTimeout(() => modal.enter = () => optionDiv.click(), 100);
     }
     renderOverlay();
     return modal;
@@ -1389,8 +1409,9 @@ let videoMain = createElement(divString, videoContainer, 'main');
 
 let menuExpanded = true;
 let menuExpandButton;
-let toggleMenu = () => {
-    menuExpanded = !menuExpanded;
+let toggleMenu = (bool) => {
+    if (typeof bool === 'boolean') menuExpanded = bool;
+    else menuExpanded = !menuExpanded;
     if (menuExpanded) {
         removeClass(menu, 'e');
         menuExpandButton[innerText] = 'expand_less';
@@ -1412,7 +1433,7 @@ createElement(spanString, addVideoButton, { [innerText]: str_addVideo });
 
 let relocating = false;
 let relocateVideoButton = createElement('a', menu, 'b', disabled);
-let relocateVideoButtonIcon = createIcon(relocateVideoButton, 'pan_tool_alt');
+let relocateVideoButtonIcon = createIcon(relocateVideoButton, 'pan_tool');
 let relocateVideoButtonSpan = createElement(spanString, relocateVideoButton, { [innerText]: str_relocate });
 relocateVideoButton.onclick = () => {
     relocating = !relocating;
@@ -1423,7 +1444,7 @@ relocateVideoButton.onclick = () => {
         addClass(videoMain, 'rlc');
     } else {
         removeClass(relocateVideoButton, '.t');
-        relocateVideoButtonIcon[innerText] = 'pan_tool_alt';
+        relocateVideoButtonIcon[innerText] = 'pan_tool';
         relocateVideoButtonSpan[innerText] = str_relocate;
         removeClass(videoMain, 'rlc');
     }
@@ -1435,16 +1456,22 @@ createElement(spanString, closeAllVideosButton, { [innerText]: str_closeAll });
 
 menuExpandButton = createIcon(createElement('a', menu, { [onclick]: toggleMenu }, 'b.fix-tl'), 'expand_less');
 
-let videoInputContainer = createElement(divString, videoMain, 'p.fr');
+let videoInputContainer = createElement(divString, videoMain, 'p.fr.blank');
 let videoInputCloseButton = createElement('a', videoInputContainer, {
     [onclick]: () => {
         removeClass(videoMain, 'go');
         addClass(videoInputContainer, hidden);
     } }, 'b.abs-tr', hidden);
 createIcon(videoInputCloseButton, 'close');
-
+createIcon(videoInputContainer, 'link', 'ph').onclick = () => videoInput.focus();
+let onVideoInput = () => {
+    if (videoInput.value !== '') removeClass(videoInputContainer, 'blank');
+    else addClass(videoInputContainer, 'blank');
+};
 let videoInput = createElement('textarea', videoInputContainer, {
     [placeholder]: str_placeholderVideo,
+    oninput: onVideoInput,
+    onchange: onVideoInput
 }, 'src');
 let videoSubmit = createElement('a', videoInputContainer, {
     [onclick]: () => addVideo(videoInput.value)
@@ -1459,7 +1486,6 @@ let videoDivs = [];
 let renderRow = () => {
     if (!bMado) {
         let newLength = Math.min(videoDivs.length, 1);
-        // setStyleVariable('--mh', '0px');
         addClass(menu, hidden);
         loadedVideoUrls.length = newLength;
         for (let i = 1; i < videoDivs.length; i++) {
@@ -1519,13 +1545,18 @@ let _addVideo = (url) => {
 }
 
 let addVideo = (url) => {
+    debug('step 1', url);
     if (!url) return openAlert(str_noValidUrl);
     if (url == 'show log') return removeClass(logDiv, hidden);
     if (url == 'clear options') return clearSaveData();
     if (url == 'show options') return debug(_saveData);
+    let before = loadedVideoUrls.length;
     if (!/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/.test(url))
         return openAlert(str_noValidUrl);
+    if (!/^[A-Za-z]+:\/\//.test(url)) url = 'https://' + url;
+    debug('step 2', url);
     _addVideo(url);
+    if (before === 0 && loadedVideoUrls.length === 1) toggleMenu(false);
     renderRow();
 }
 
@@ -1550,7 +1581,8 @@ let openLink = (string) => {
             [onclick]: (close) => {
                 addVideo(decoded);
                 close();
-            }
+            },
+            enter: true
         }],
         close: true,
     });
@@ -2477,10 +2509,12 @@ let panelHidden = true;
 let togglePanel = () => {
     panelHidden = !panelHidden;
     if (panelHidden) {
+        removeClass(dcconIcon, 'f');
         addClass(dcconPanel, hidden);
     }
     else {
         input.focus();
+        addClass(dcconIcon, 'f');
         removeClass(dcconPanel, hidden)
     };
     request(() => input.focus());
@@ -2488,7 +2522,7 @@ let togglePanel = () => {
 let dccon = createElement('a', chatInputContainerFloat, {
     onmousedown: () => togglePanel(),
 }, 'd.b', disabled);
-createIcon(dccon, 'mood');
+let dcconIcon = createIcon(dccon, 'mood');
 
 //#endregion
 
@@ -2499,43 +2533,80 @@ createIcon(dccon, 'mood');
 
 if (DEBUG) debug('upload');
 
-let uploadPanel = createElement(divString, chatInputContainerFloat, 'p.up.abs', hidden);
-let uploadPage = createElement(divString, uploadPanel, 'fr');
-let previewAsIcon;
+let uploadPanel = createElement(divString, chatInputContainerFloat, 'p.up.abs.vp.pv-vp', hidden);
+let uploadPage = createElement(divString, uploadPanel, 'fr.page');
+let addImage = createElement('a', uploadPage, {
+    [onclick]: () => uploadInput.click()
+}, 'pv.r.b.o-l');
+createIcon(addImage, 'add_photo_alternate');
+createElement(spanString, addImage, { [innerText]: str_uploadImage });
 
-let lastFileData = null;
+let zzal = null;
+let omitZzal = false;
+let files = [];
 
+let panelToggled = false;
 let renderUploadPanel = () => {
-    if (!lastFileData || !isPostingWrite()) {
+    if (zzal !== null) {
+        if (!useZzal) addClass(zzal.preview, hidden);
+        else {
+            removeClass(zzal.preview, hidden);
+            if (omitZzal) removeClass(zzal.preview, 'up');
+            else addClass(zzal.preview, 'up');
+        }
+    }
+    uploadNum[innerText] = files.length;
+    if (files.length == 0) {
+        addClass(uploadNum, hidden);
+    } else {
+        removeClass(uploadNum, hidden);
+    }
+    if (!panelToggled || !isPostingWrite()) {
         addClass(uploadPanel, hidden);
-        addClass(previewAsIcon, hidden);
+        removeClass(uploadIcon, 'f');
     } else {
         removeClass(uploadPanel, hidden);
-        if (lastFileData.upload) removeClass(previewAsIcon, hidden);
+        addClass(uploadIcon, 'f');
     }
+};
+
+let toggleUploadPanel = (bool = null) => {
+    if (bool === null) panelToggled = !panelToggled;
+    else panelToggled = bool;
+    renderUploadPanel();
+};
+
+let createPreview = (parent, fileData) => {
+    let preview = createElement(divString, parent, 'pv.r');
+    let previewImageContainer = createElement(divString, preview, 'image');
+    let previewImg = createElement('img', previewImageContainer);
+    let previewDesc = createElement(divString, preview, 'desc');
+    let name = createElement(spanString, previewDesc, { [innerText]: fileData.name }, 'file-name');
+    createElement(spanString, previewDesc, { [innerText]: '(' + bytes(fileData.size) + ')' }, 'size');
+    return {
+        p: preview,
+        c: previewImageContainer,
+        i: previewImg,
+        n: name
+    };
 }
 
 // File을 받아 화면에 표시하고 필요한 정보를 담은 객체를 반환
 let createFileData = (file) => {
-    let preview = createElement(divString, uploadPage, 'pv.r');
-    let previewImageContainer = createElement(divString, preview, 'image');
-    let previewImg = createElement('img', previewImageContainer);
-    let previewDesc = createElement(divString, preview, 'desc');
-    createElement(spanString, previewDesc, { [innerText]: file.name }, 'file-name');
-    createElement(spanString, previewDesc, { [innerText]: '(' + bytes(file.size) + ')' }, 'size');
+    let { p: preview,
+        c: previewImageContainer,
+        i: previewImg,
+    } = createPreview(uploadPage, file);
     let previewPending = createIcon(previewImageContainer, 'pending', 'pending.abs');
     let previewError = createIcon(previewImageContainer, 'warning', 'error.abs', hidden);
     let reader = new FileReader();
-    reader.onload = () => {
-        previewImg.src = reader.result;
-        previewAsIcon.src = reader.result;
-        removeClass(previewAsIcon, hidden);
-    }
+    reader.onload = () => previewImg.src = reader.result;
     reader.readAsDataURL(file);
 
     let { r, p } = initPromise();
     let fileData = {
         preview: preview,
+        img: previewImg,
         original: file.name,
         name: '',
         size: file.size,
@@ -2547,7 +2618,13 @@ let createFileData = (file) => {
         url: '',
         close: async() => {
             preview.remove();
-            lastFileData = null;
+            for (let i = 0; i < files.length; i++) {
+                let oldFile = files[i];
+                if (fileData === oldFile) {
+                    files.splice(i, 1);
+                    break;
+                }
+            }
             renderUploadPanel();
             if (fileData.upload) postDeleteImage(fileData.num);
             else {
@@ -2555,11 +2632,13 @@ let createFileData = (file) => {
                 if (!fileData.error) postDeleteImage(fileData.num);
             }
         },
+        p: p
     };
+    files.push(fileData);
 
     let previewClose = createElement('a', preview, 'close.abs-tr.b');
     createIcon(previewClose, 'delete', 'f');
-    previewClose.onclick = fileData.close;
+    previewClose.onclick = () => fileData.close();
 
     let onError = (reason, ...any) => {
         openAlert(reason);
@@ -2567,7 +2646,6 @@ let createFileData = (file) => {
         fileData.error = true;
         addClass(preview, 'error');
         removeClass(previewError, hidden);
-        renderUploadPanel();
     }
     postImage(file).catch(debug).then((json) => {
         addClass(previewPending, hidden);
@@ -2581,49 +2659,156 @@ let createFileData = (file) => {
         r();
     });
     return fileData;
-}
+};
+
+let exportFileData = (fileData) => {
+    return {
+        name: fileData.name,
+        size: fileData.size,
+        type: fileData.type,
+        url: fileData.url,
+        src: fileData.img.src,
+    };
+};
+let importFileData = (fileData) => {
+    let { p: preview,
+        i: previewImg
+    } = createPreview(uploadPage, fileData);
+    addClass(preview, 'up');
+    previewImg.src = fileData.src;
+    
+    let imported = {
+        preview: preview,
+        img: previewImg,
+        original: fileData.name,
+        name: fileData.name,
+        size: fileData.size,
+        type: fileData.type,
+        upload: true,
+        file: null,
+        error: false,
+        num: null,
+        url: fileData.url,
+        close: () => {
+            preview.remove();
+            for (let i = 0; i < files.length; i++) {
+                let oldFile = files[i];
+                if (fileData === oldFile) {
+                    files.splice(i, 1);
+                    break;
+                }
+            }
+            renderUploadPanel();
+        },
+    };
+
+    let previewClose = createElement('a', preview, 'close.abs-tr.b');
+    createIcon(previewClose, 'delete', 'f');
+    previewClose.onclick = () => imported.close();
+
+    return imported;
+};
+
+let setZzal = (fileData = null) => {
+    if (zzal !== null) zzal.close();
+    if (fileData === null) {
+        zzal?.preview.remove();
+        applyOption('zzal', '');
+        removeClass(addZzal, hidden);
+        zzal = null;
+        return;
+    }
+
+    zzal = fileData;
+    addClass(zzal.preview, 'o-f', 'z');
+    for (let i = 0; i < files.length; i++) {
+        if (files[i] === fileData) {
+            files.splice(i, 1);
+        }
+    }
+    fileData.close = () => {
+        omitZzal = true;
+    };
+    
+    let { p: preview, i: img, n: name } = createPreview(optionsWrite, fileData);
+    addClass(preview, 'up', 'o-f');
+    addClass(addZzal, hidden);
+    let deleteZzal = createElement('a', preview, 'close.abs-tr.b');
+    createIcon(deleteZzal, 'delete', 'f');
+    deleteZzal.onclick = () => {
+        openModal({
+            desc: str_askDeleteZzal,
+            options: [{
+                text: str_yes,
+                [onclick]: (close) => {
+                    setZzal(null);
+                    preview.remove();
+                    close();
+                },
+                enter: true
+            }, {
+                text: str_cancel
+            }]
+        });
+    };
+
+    let onUpload = () => {
+        img.src = fileData.img.src;
+        name.innerText = fileData.name;
+        let exported = exportFileData(fileData);
+        applyOption('zzal', JSON.stringify(exported));
+    };    
+    if (fileData.upload) onUpload();
+    else (async() => {
+        await fileData.p;
+        onUpload();
+    })();
+    
+    renderUploadPanel();
+};
+
+let applyZzal = () => {
+    let json = getOption('zzal');
+    if (json === null) return;
+    if (json === '') return;
+    try {
+        let exported = JSON.parse(json);
+        let fileData = importFileData(exported);
+        setZzal(fileData);
+    } catch {
+        setZzal(null);
+    }
+};
 
 let onFileDropped = (file) => {
     if (file.size > 20000000) return openAlert(str_imageTooBig);
     if (bWriteUnavailable) return openAlert(str_chatDisabled);
-    lastFileData?.close();
-    lastFileData = createFileData(file);
+    createFileData(file);
     renderUploadPanel();
-}
+    toggleUploadPanel(true);
+};
 
 let uploadInput = createElement('input', null, {
     type: 'file',
     accept: 'image/*',
+    multiple: 'true',
     onchange: () => {
-        if (uploadInput.files.length) onFileDropped(uploadInput.files[0]);
+        for (let file of uploadInput.files) {
+            onFileDropped(file);
+        }
     }
 });
 
-let askReplace = (onOk) => {
-    if (lastFileData) openModal({
-        title: str_replaceImage,
-        desc: str_imageOver,
-        options: [{
-            text: str_replace,
-            [onclick]: (close) => {
-                onOk();
-                close();
-            }
-        }, str_cancel ],
-    });
-    else onOk();
-}
-
 let upload = createElement('a', chatInputContainerFloat, {
-    [onclick]: () => askReplace(() => uploadInput.click()),
+    [onclick]: () => toggleUploadPanel()
 }, 'up.b.abs-tl', disabled);
 addTooltip(upload, { text: str_tooltip_upload, top: true });
 
 // 드래그 앤 드롭 지원
-let c = 0;
 ondragenter = async (ev) => {
     if (ev.dataTransfer && ev.dataTransfer.files) {
-        let file = ev.dataTransfer.files[0];
+        let files = ev.dataTransfer.files.length > 0 ? ev.dataTransfer.files :ev.dataTransfer.items;
+        let file = files[0];
         if (!file.type || file.type.split('/')[0] != 'image') return;
         addClass(dropArea, 'drag');
     }
@@ -2640,19 +2825,22 @@ dropArea.ondrop = (ev) => {
     ev.preventDefault();
     removeClass(dropArea, 'drag');
     if (ev.dataTransfer.files) {
-        let file = ev.dataTransfer.files[0];
-        if (!file.type || file.type.split('/')[0] != 'image') return openAlert(str_notImage);
-        askReplace(() => onFileDropped(file));
+        let alert = false;
+        for (let file of ev.dataTransfer.files) {
+            if (!file.type || file.type.split('/')[0] != 'image') alert = true;
+            else onFileDropped(file);
+        }
+        if (alert) openAlert(str_notImage);
     }
 }
 
-createIcon(upload, 'add_circle');
-previewAsIcon = createElement('img', upload, 'pv.icon.r', hidden);
+let uploadIcon = createIcon(upload, 'add_circle');
+let uploadNum = createElement('span', upload, { [innerText]: 0 }, 'cnt.abs-tr', hidden);
 
 renderUploadImage = () => {
     if (isPostingWrite() && !bWriteUnavailable) removeClass(upload, disabled);
     else addClass(upload, disabled);
-}
+};
 
 //#endregion
 
@@ -2671,6 +2859,7 @@ let settingsBack = createElement('a', settingsPanel, { [onclick]: () => changeSe
 createIcon(settingsBack, 'navigate_before'); 
 let settingsPage = createElement(divString, settingsPanel);
 let options = createElement(divString, settingsPage, 'opts');
+let optionsWrite = createElement(divString, settingsPage, 'opts', hidden);
 let optionsChat = createElement(divString, settingsPage, 'opts', hidden);
 
 let lastPage = options;
@@ -2710,7 +2899,68 @@ let createPageSelect = (labelText, page) => {
     let option = createElement(divString, options, { [onclick]: () => changeSettingsPage(page) }, 'opt.r');
     createElement(spanString, option, { [innerText]: labelText }, 'label');
     createIcon(option, 'navigate_next', 'abs-r');
+    return option;
 };
+
+// optionsWrite page
+createPageSelect(str_settings_write, optionsWrite);
+let uploadZzal = createElement('input', null, {
+    type: 'file',
+    accept: 'image/*',
+    multiple: 'true',
+    onchange: () => {
+        if (uploadZzal.files.length === 0) return;
+        let fileData = createFileData(uploadZzal.files[0]);
+        setZzal(fileData);
+        if (!useZzal) optionUseZzal.click();
+    }
+});
+let addZzal = createElement('a', optionsWrite, {
+    [onclick]: () => uploadZzal.click()
+}, 'pv.r.b.o-f');
+createIcon(addZzal, 'add_photo_alternate');
+createElement(spanString, addZzal, {
+    [innerText]: str_uploadZzal
+});
+let useZzal = false;
+let optionUseZzal = createOption(str_settings_useZzal, () => {
+    useZzal = true;
+    if (zzal === null) return;
+    removeClass(zzal.preview, hidden);
+}, () => {
+    useZzal = false;
+    if (zzal === null) return;
+    addClass(zzal.preview, hidden);
+}, false, optionsWrite);
+
+let footerString = '';
+let footerOption = createElement('a', optionsWrite, {
+    [onclick]: () => {
+        let modal = openModal({
+            title: str_settings_footer,
+            input: footerString,
+            options: [{
+                text: str_confirm,
+                [onclick]: (close) => {
+                    footerString = modal.input.value;
+                    applyOption('footer', footerString);
+                    close();
+                }
+            }, {
+                text: str_cancel
+            }]
+        });
+        let footerInput = modal.input;
+        addClass(footerInput, 'ft');
+        let static = createElement(spanString, null, {
+            [innerText]: '- ' + str_dclivechat,
+            [onclick]: () => footerInput.focus()
+        }, 'footer-static');
+        footerInput.insertAdjacentElement('afterend', static);
+    }
+}, 'opt.r');
+createElement(spanString, footerOption, { [innerText]: str_settings_footer }, 'label');
+createIcon(footerOption, 'navigate_next', 'abs-r');
 
 // default: true
 createOption(str_settings_darkMode, () => removeClass(body, 'light'), () => addClass(body, 'light'), true);
@@ -2726,7 +2976,8 @@ let madoOption = createOption(str_settings_mado, () => {
                     renderRow();
                     applyOption('mado', true);
                     close();
-                }
+                },
+                enter: true
             }, {
                 text: str_cancel,
                 [onclick]: (close) => {
@@ -2756,7 +3007,7 @@ createOption(str_settings_hideLogin, () => {
     removeClass(loginInputContainer, hidden);
     removeClass(loginInputExpander, hidden);
 });
-createOption(str_settings_shortLatency, () => setIntervalIndex(1), () => setIntervalIndex(0));
+createOption(str_settings_lowLatency, () => setIntervalIndex(1), () => setIntervalIndex(0));
 createOption(str_settings_chatOnly, () => addClass(main, 'co'), () => removeClass(main, 'co'));
 
 // page: chat
@@ -2793,14 +3044,19 @@ createElement(spanString, settingsPanel, { [innerText]: 'version: ' + VERSION },
 let settingsHidden = true;
 toggleSettings = () => {
     settingsHidden = !settingsHidden;
-    if (settingsHidden) addClass(settingsPanel, hidden); 
-    else removeClass(settingsPanel, hidden);
+    if (settingsHidden) {
+        removeClass(settingsIcon, 'f');
+        addClass(settingsPanel, hidden);
+    } else {
+        addClass(settingsIcon, 'f');
+        removeClass(settingsPanel, hidden);
+    }
 }
 
 // 옵션 버튼과 채팅 보내기 버튼
 let submitContainer = createElement(divString, chatInputContainer, 'fr.sc');
 let settings = createElement('a', submitContainer, { [onclick]: toggleSettings }, 'b.gray');
-createIcon(settings, 'settings');
+let settingsIcon = createIcon(settings, 'settings');
 
 let submit = createElement('a', submitContainer, 'sb', disabled);
 createElement(spanString, submit, { [innerText]: str_chat });
@@ -3196,9 +3452,15 @@ let writePost = async (title, content) => {
 
     // apply image
     let imageContent = '';
-    if (lastFileData && lastFileData.upload) {
-        imageContent += str_lineBreak + `<img src="${lastFileData.url}" class="txc-image "/>` + str_lineBreak;
-        lastData['file_write[0][file_no]'] = lastFileData.num;
+    if (files.length !== 0 | (useZzal && zzal !== null && !omitZzal)) imageContent += str_lineBreak;
+    if (useZzal && zzal !== null && !omitZzal) {
+        imageContent += `<img src="${zzal.url}"/>` + str_lineBreak;
+    }
+    for (let i = 0; i < files.length; i++) {
+        let fileData = files[i];
+        if (!fileData.upload) return falseString(str_pendingUpload);
+        imageContent += `<img src="${fileData.url}" class="txc-image "/>` + str_lineBreak;
+        lastData['file_write[' + i + '][file_no]'] = fileData.num;
     }
 
     // apply link
@@ -3283,7 +3545,12 @@ let onWritePost = (res) => {
         fix: bUserFix,
         my: true,
     });
-    lastFileData?.close();
+    omitZzal = false;
+    for (let i = 0; i < files.length; i++) {
+        files[i].close();
+    }
+    files.length = 0;
+    toggleUploadPanel(false);
 }
 let onWriteComment = (res, num) => {
     timeout(renderInputCaptcha, 500);
@@ -3361,8 +3628,14 @@ submit.onclick = async() => {
     input.oninput();
     if (targetPostNum == 0) {
         let { r, p } = initPromise();
-        if (lastFileData && !lastFileData.upload) {
-            if (lastFileData.error) {
+        if (files.length !== 0) {
+            let pending = false;
+            let error = false;
+            for (let fileData of files) {
+                if (!fileData.upload) pending = true;
+                if (fileData.error) error = true;
+            }
+            if (error) {
                 openModal({
                     title: str_postErrorImageTitle,
                     desc: str_postErrorImageDesc,
@@ -3371,7 +3644,8 @@ submit.onclick = async() => {
                         [onclick]: (close) => {
                             r(true);
                             close();
-                        }
+                        },
+                        enter: true
                     }, {
                         text: str_cancel,
                         [onclick]: (close) => {
@@ -3381,16 +3655,21 @@ submit.onclick = async() => {
                     }],
                 });
                 if (!await p.catch(debug)) return;
+            } else if (pending) {
+                return openAlert(str_pendingUpload);
             }
-            return openAlert(str_pendingUpload);
         }
         let splits = title.split('\n');
         title = splits[0];
-        let body = '';
+        let body = str_lineBreak;
         for (let i = 1; i < splits.length; i++) {
             body += `<p>${splits[i]}</p>`;
         }
-        body += str_lineBreak + `<p style="color:#ABABAB;">- ${str_dclivechat} ${randomBlanks(20)}</p>`;
+        if (footerString !== '') {
+            splits = footerString.split('\n');
+            for (let split of splits) body += `<p style="color:#ABABAB;">${split}</p>`;
+        }
+        body += `<p style="color:#ABABAB;">- ${str_dclivechat} ${randomBlanks(20)}</p>`;
         onWritePost(await writePost(title, body).catch(debug));
     } else {
         lastSigniture = randomBlanks(commentSignitureLength);
@@ -3404,6 +3683,24 @@ submit.onclick = async() => {
 loadOptions();
 populatePackage('recent');
 populatePackage('icon');
+if (loadedVideoUrls.length !== 0) toggleMenu(false);
+
+// 업데이트 및 최초실행 안내창
+let lastVersion = getOption('version');
+if (typeof VERSION !== 'undefined') {
+    if (lastVersion !== VERSION) {
+        openModal({
+            title: str_update + ': ' + VERSION,
+            desc: str_features + '<a href="https://joh1ah.github.io/dclivechat/change.log" target="_blank">' + str_changelog + '</a>',
+            html: true,
+        });
+    }
+    applyOption('version', VERSION);
+}
+
+applyZzal();
+footerString = getOption('footer') ?? '';
+
 request(() => removeClass(body, hidden));
 debug('INIT done');
 })().catch(reason => console.log(reason));
