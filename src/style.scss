@@ -191,6 +191,26 @@ a, span {
             margin: 0 4px;
         }
     }
+    >textarea {
+        white-space: pre-wrap;
+        height: 3.2em;
+        margin: 18px;
+        &.ft {
+            border-radius: 4px 4px 0 0;
+            padding-bottom: calc(10px + 1em);
+            margin-bottom: 0;
+            color: rgb(var(--cfd));
+        }
+    }
+}
+.footer-static {
+    position: relative;
+    border-radius: 0 0 4px 4px;
+    margin-bottom: 20px;
+    width: calc(100% - 84px);
+    color: rgb(var(--cfd));
+    background: rgb(var(--cbl));
+    padding: 0 24px;
 }
 
 .ipvs {
@@ -339,6 +359,7 @@ a, span {
 }
 
 input, textarea {
+    font-size: var(--fs);
     height: 1.6em;
     background: $colorBackgroundLight;
     color: $colorForeground;
@@ -363,6 +384,7 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
     background: $colorBackground;
     box-shadow: $colorShadow 0 0 10px;
     z-index: 1;
+    animation: fade-in-grow 0.2s;
 
     >.pc {
         width: calc(100% - 60px) !important;
@@ -376,7 +398,7 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
 
 .p, .modal {
     >.b.abs-tr {
-        margin: 2px;
+        // margin: 2px;
     }
 }
 
@@ -440,8 +462,8 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
     padding: 10px;
     >.opt {
         width: calc(100% - 20px);
-        padding: 4px 10px;
-        margin: 2px 0;
+        padding: 6px 10px;
+        // margin: 2px 0;
         justify-content: space-between;
         cursor: pointer;
         .value {
@@ -501,7 +523,7 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
     >.tt {
         cursor: pointer;
         width: calc(100% - 12px);
-        padding: 6px 6px;
+        padding: 5px 6px;
         >span {
             width: 100%;
             .cm {
@@ -823,6 +845,22 @@ main {
         width: 360px;
         >.src {
             width: 200px;
+            margin: 10px;
+            overflow-y: hidden;
+        }
+        >.ph {
+            visibility: hidden;
+            margin-right: calc(-1em - 20px);
+            margin-left: 20px;
+            z-index: 1;
+        }
+        &.blank {
+            >.src {
+                text-indent: 14px;
+            }
+            >.ph {
+                visibility: visible;
+            }
         }
     }
 }
@@ -939,9 +977,8 @@ main.co {
         visibility: collapse !important;
     }
     >.chat {
-        // height: calc(100vh - var(--mb)) ;
         height: 100svh;
-        top: 0;
+        top: 0; 
     }
     .f>.i>textarea {
         width: calc(100svw - 100px);
@@ -1026,14 +1063,16 @@ $inputHeight: 100px;
 .nt {
     bottom: 150px;
     >.cnt {
-        width: 12px;
-        height: 12px;
-        border-radius: 12px;
-        transition: all .2s;
         background-color: $colorWarning;
-        display: flex;
-        font-size: 8px;
     }
+}
+.cnt {
+    width: 12px;
+    height: 12px;
+    border-radius: 12px;
+    transition: all .2s;
+    display: flex;
+    font-size: 8px;
 }
 
 .li-c { //login-info-container
@@ -1098,6 +1137,7 @@ $inputHeight: 100px;
     >.i {
         min-height: var(--ih);
         textarea {
+            overflow: hidden;
             margin: 4px 0;
             width: 240px;
             height: 20px;
@@ -1145,6 +1185,7 @@ $inputHeight: 100px;
     >* {
         grid-row: 1;
         height: 100%;
+        max-height: 50svh;
         width: 100%;
     }
 }
@@ -1206,15 +1247,32 @@ $inputHeight: 100px;
     padding: 10px;
 }
 
+$previewMargin: 10px;
+$previewSize: 180px;
+$previewImageSize: 140px;
+
+.pv-vp {
+    height: auto;
+    >.page {
+        height: $previewSize + $previewMargin + $previewMargin;
+        max-width: none;
+        align-items: center;
+        padding: 0;
+    }
+}
+
 .pv {
     position: relative;
     background: $colorBackground;
-    height: 200px;
-    width: 200px;
+    height: $previewSize;
+    width: $previewSize;
+    margin: $previewMargin;
+    padding: 0;
+    box-shadow: $colorBackgroundDark 0 0 4px;
     >.image {
         position: relative;
-        height: 140px;
-        width: 140px;
+        height: $previewImageSize;
+        width: $previewImageSize;
         >img {
             max-height: 100%;
             max-width: 100%;
@@ -1242,11 +1300,9 @@ $inputHeight: 100px;
         }
     }
     >.close {
+        margin: -4px;
         background: $colorBackground;
         box-shadow: $colorBackgroundDark 0 0 4px;
-        >.icon {
-            color: $colorWarning;
-        }
         &:hover {
             background: $colorBackgroundLight;
         }
@@ -1257,6 +1313,13 @@ $inputHeight: 100px;
     &.up>.image>img {
         filter: none;
     }
+}
+
+.o-f {
+    order: -1;
+}
+.o-l {
+    order: 1;
 }
 
 // ######################## RESPONSIVE ##############

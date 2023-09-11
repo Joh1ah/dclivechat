@@ -4,7 +4,7 @@
 
 <img src="https://nstatic.dcinside.com/dc/w/images/logo_icon.ico" style="width:1em;height:1em"> [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.1.3-20230904`
+최신 버전: `2.2.0-20230911`
 
 <br>
 
@@ -55,11 +55,16 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 <br>
 
 ## Changelog
-v2.1.3-20230904
+v2.2.0-20230911
+* 자동짤방 및 여러 이미지 첨부 기능 추가
+* 꼬리말 수정 기능 추가
+* 프로토콜이 명시되지 않은 주소가 열리지 않는 문제 수정
 * 최초 실행 시 안내사항 표시
 * 모바일 채팅창 오버스크롤 문제 수정
+* 일부 환경에서 이미지 드롭이 되지 않는 문제 수정
 * 반응형 UI 개선
 * 브라우저 호환성 개선
+* 기타 UI 개선
 
 v2.1.2-20230214
 * 이미지가 정상적으로 업로드되지 않던 문제 수정
