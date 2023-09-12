@@ -592,12 +592,10 @@ let scrollToTop = () => scrollTo(0, 0);
 let preventEnter = false;
 let enterAsClick = (input, submit, bShift = false) => {
     input.onkeypress = (ev) => {
-        debug(preventEnter, ev.key);
         if (preventEnter) return;
         if (ev.key != 'Enter') return;
         if (bMobileDevice && bShift) return;
         if (!bMobileDevice && bShift && ev.shiftKey) return;
-        debug('clicking');
         ev.preventDefault();
         submit.click();
         input.oninput?.();
@@ -1331,7 +1329,7 @@ let openModal = ({title, desc, options, close, html, input}) => {
             createIcon(optionDiv, option.icon);
             createElement(spanString, optionDiv, { [innerText]: option.text });
         }
-        if (option.enter) setTimeout(() => modal.enter = () => optionDiv.click(), 100);
+        if (option.enter) timeout(() => modal.enter = () => optionDiv.click(), 100);
     }
     renderOverlay();
     return modal;
@@ -3686,17 +3684,23 @@ populatePackage('icon');
 if (loadedVideoUrls.length !== 0) toggleMenu(false);
 
 // 업데이트 및 최초실행 안내창
-let lastVersion = getOption('version');
+let lastVersion = getOption('version') ?? '';
 if (typeof VERSION !== 'undefined') {
-    if (lastVersion !== VERSION) {
+    let getMajor = (version) => {
+        let splits = version.split('.');
+        return splits[0] + '.' + splits[1];
+    } 
+    let oldVersionMajor = getMajor(lastVersion);
+    let versionMajor = getMajor(VERSION);
+    if (oldVersionMajor !== versionMajor) {
         openModal({
             title: str_update + ': ' + VERSION,
             desc: str_features + '<a href="https://joh1ah.github.io/dclivechat/change.log" target="_blank">' + str_changelog + '</a>',
             html: true,
         });
     }
-    applyOption('version', VERSION);
 }
+applyOption('version', VERSION);
 
 applyZzal();
 footerString = getOption('footer') ?? '';
