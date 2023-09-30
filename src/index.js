@@ -1991,7 +1991,6 @@ let newLine = async (postData, bNow = false) => {
     
     // 글 본문
     if (num) {
-        // let iframes = [];
         titleDiv.id = getNotificationKey(num, 0);
         
         let postContent = createElement(divString, line, 'w.zero');
@@ -2016,7 +2015,36 @@ let newLine = async (postData, bNow = false) => {
             renderCloseAllButton();
 
             getPostContent(num).catch(debug).then(({text}) => {
-                postContentPage.innerHTML = text;
+                const iframes = text.matchAll(/<iframe[^>]*id="movieIcon([^"]*)"[^>]*>[^<]*<\/iframe>/g);
+                if (iframes && true) (async() => {
+                    for (const iframe of iframes) {
+                        const movieUrl = host + 'board/movie/movie_view?no=' + iframe[1];
+                        const movieText = await getAsText(movieUrl);
+                        if (!movieText) continue;
+                        const videoUrl = movieText.match(/<video[^>]*poster="([^"]*)"[^>]*>[^<]*<source[^>]*src="([^"]*)"[^>]*type="([^"]*)"[^>]*>/);
+                        if (!videoUrl) continue;
+                        const temp = createElement(divString, null, 'v-container');
+                        const wrap = createElement(divString, temp, 'video_wrap');
+                        createElement('source', 
+                            createElement('video', 
+                                createElement(divString, wrap, 'video_inbox'),
+                                {
+                                    controls: true,
+                                    playsinline: true,
+                                    controlslist: 'nodownload',
+                                    poster: videoUrl[1],
+                                    'data-no': iframe[1],
+                                },
+                                'dc_mv'
+                            ),
+                            { src: videoUrl[2], type: videoUrl[3] }
+                        );
+                        text = text.r(iframe[0], temp.outerHTML);
+                        temp.remove();
+                    }
+                    postContentPage.innerHTML = text;
+                })();
+                else postContentPage.innerHTML = text;
             });
         };
 

@@ -4,7 +4,7 @@
 
 <img src="https://nstatic.dcinside.com/dc/w/images/logo_icon.ico" style="width:1em;height:1em"> [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.2.1-20230912`
+최신 버전: `2.3.0-20230930`
 
 <br>
 
@@ -55,9 +55,13 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 <br>
 
 ## Changelog
+v2.3.0-20230930
+* 동영상 업로드 기능으로 첨부된 영상이 제대로 표시되지 않는 문제 수정
+
 v2.2.1-20230912
 * 주요 업데이트가 아닌 경우 알림이 나오지 않도록 변경
 * 업데이트 알림이 계속 나오는 문제 수정
+* 브라우저 호환성 개선
 
 v2.2.0-20230911
 * 자동짤방 및 여러 이미지 첨부 기능 추가
