@@ -412,7 +412,6 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
 
 .tab {
     display: flex;
-    // background: $colorBackground;
     border-radius: 4px 4px 0 0;
     z-index: 1;
     min-height: 1.2em;
@@ -675,11 +674,6 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
         }
     }
 }
-
-// .x {
-//     position: fixed;
-//     bottom: 0;
-// }
 
 video.d, img.d {
     width: var(--ds);

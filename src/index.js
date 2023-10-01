@@ -263,7 +263,7 @@ let bMobileSafari = bMobileDevice && /Safari/i.test(navigator.userAgent);
 
 let intervalPresets = [ 4000, 2500 ];
 let minInterval = 2000; 
-let maxPost = 30;
+let maxPost = 60;
 let maxCommentOnPage = 20;
 let maxOpened = 5;
 let commentSignitureLength = 8;
@@ -376,7 +376,6 @@ let interval = intervalPresets[0];
 let lastNum = 0;
 let posting = false;
 let newPostCount = 0;
-// let bBlockPullDownChange = true;
 let bPullDown = true;
 let firstUpdate = true;
 let bGreeted = false;
@@ -395,8 +394,7 @@ let pullDown;
 let togglePullDown;
 let toggleExpander;
 
-
-let scrollSus = 0;
+let scrollSus = 99999;
 
 // 전역 변수 매크로
 let isPostingWrite = () => (targetPostNum == 0);
@@ -1029,9 +1027,7 @@ let replacedErrorIndex = 0;
 let neutralizeDccon = (string) => {
     string = string
         .r(/onmousedown="[^"]+"/g, '')
-        // .r(/onerror="[^"]+"/, `onerror="document.${onerrorFuncName}(this.parentNode)"`)
-        .r(/class="written_dccon"/g, 'class="d"')
-        .r(/class="written_dccon "/g, 'class="d"');
+        .r(/class="written_dccon[^"]*"/g, 'class="d"');
     let matches = string.matchAll(/onerror="[^"]+"/g);
     for (let match of matches) {
         replacedErrorIndex++;
@@ -1270,8 +1266,6 @@ if (DEBUG) debug('ui');
 
 logDiv = createElement(divString, body, 'log', hidden);
 scrollToTop();
-
-scrollSus = 99999;
 
 let dropArea = createElement(divString, body, 'o');
 createElement(divString, dropArea, { [innerText]: str_dragAndDrop } , 'drop');
@@ -3129,7 +3123,6 @@ let getPostContent = async (num, bForce = false) => {
     if (!writer) return returnFunc();
     contentData.name = writer.getAttribute('data-nick');
     contentData.write = writeDiv;
-    // contentData.text = replaceImage(replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML)))), 'pc-' + num);
     contentData.text = replaceImage(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML))), 'pc-' + num);
     let esno = parsed[querySelector]("[name='e_s_n_o']");
     if (esno) contentData.esno = esno.value;
