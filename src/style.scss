@@ -412,7 +412,6 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
 
 .tab {
     display: flex;
-    // background: $colorBackground;
     border-radius: 4px 4px 0 0;
     z-index: 1;
     min-height: 1.2em;
@@ -659,7 +658,7 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
     >.page {
         min-width: calc(100% - 2px);
         max-width: calc(100% - 2px);
-        padding: 2px 0 20px 0;
+        padding: 2px 0 12px 0;
         align-items: baseline;
         
         .notify .tt {
@@ -675,11 +674,6 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
         }
     }
 }
-
-// .x {
-//     position: fixed;
-//     bottom: 0;
-// }
 
 video.d, img.d {
     width: var(--ds);
@@ -1088,8 +1082,13 @@ $inputHeight: 100px;
 
 .li-c { //login-info-container
     grid-row: 4;
-    .ex:hover {
-        background: $colorBackgroundLight;
+    .ex {
+        >.icon {
+            font-size: 12px;
+        }
+        &:hover {
+            background: linear-gradient($colorBackgroundLight 60%, transparent);
+        }
     }
     input {
         height: 10px;

@@ -263,7 +263,7 @@ let bMobileSafari = bMobileDevice && /Safari/i.test(navigator.userAgent);
 
 let intervalPresets = [ 4000, 2500 ];
 let minInterval = 2000; 
-let maxPost = 100;
+let maxPost = 60;
 let maxCommentOnPage = 20;
 let maxOpened = 5;
 let commentSignitureLength = 8;
@@ -376,7 +376,6 @@ let interval = intervalPresets[0];
 let lastNum = 0;
 let posting = false;
 let newPostCount = 0;
-let bBlockPullDownChange = true;
 let bPullDown = true;
 let firstUpdate = true;
 let bGreeted = false;
@@ -394,6 +393,8 @@ let setTarget;
 let pullDown;
 let togglePullDown;
 let toggleExpander;
+
+let scrollSus = 99999;
 
 // 전역 변수 매크로
 let isPostingWrite = () => (targetPostNum == 0);
@@ -1026,8 +1027,7 @@ let replacedErrorIndex = 0;
 let neutralizeDccon = (string) => {
     string = string
         .r(/onmousedown="[^"]+"/g, '')
-        // .r(/onerror="[^"]+"/, `onerror="document.${onerrorFuncName}(this.parentNode)"`)
-        .r(/class="written_dccon"/g, 'class="d"');
+        .r(/class="written_dccon[^"]*"/g, 'class="d"');
     let matches = string.matchAll(/onerror="[^"]+"/g);
     for (let match of matches) {
         replacedErrorIndex++;
@@ -1215,6 +1215,10 @@ let clearSaveData = () => saveOptions({});
 clearChildren(body);
 addClass(body, hidden);
 
+// 기존 타이머 제거
+for (var i = 1; i < 99999; i++) window.clearInterval(i);
+for (var i = 1; i < 99999; i++) window.clearTimeout(i);
+
 // 스타일 적용
 let stylesheet = STYLESHEET // defined when building
     .r(/_w/g, 'width')
@@ -1262,19 +1266,6 @@ if (DEBUG) debug('ui');
 
 logDiv = createElement(divString, body, 'log', hidden);
 scrollToTop();
-
-// 첫 글 목록이 로드되기 전에 스크롤 고정이 풀리는 문제를 강제로 막음
-timeout(() => {
-    if (DEBUG) debug('400');
-    scrollToTop();
-    bPullDown = true;
-    pullDown(true);
-    timeout(() => {
-        if (DEBUG) debug('400 done');
-        pullDown(true);
-        bBlockPullDownChange = false;
-    }, 400);
-}, 400);
 
 let dropArea = createElement(divString, body, 'o');
 createElement(divString, dropArea, { [innerText]: str_dragAndDrop } , 'drop');
@@ -1829,18 +1820,23 @@ createIcon(scrollDownButtonDiv2, arrow);
 let newMessageSpan = createElement(spanString, scrollDownButtonDiv2, { [innerText]: str_pullDownHover }, 'text', (bMobileDevice ? hidden : '_'));
 
 // 채팅창이 스크롤될 시 고정 여부를 다시 판단
-let onScrollTimer = null;
 let diff = () => Math.abs(chatPage.scrollHeight - chatViewport.clientHeight - chatViewport.scrollTop);
-let onChatScroll = () => {
-    if (bBlockPullDownChange) return pullDown(true);
-    // if (onScrollTimer) return;
-    clearTimeout(onScrollTimer);
-    // onScrollTimer = null;
-    onScrollTimer = timeout(() => {
-        if (bPullDown == diff() > 2) togglePullDown();
-    }, 200);
+let lastDiff = 0;
+chatViewport.onscroll = () => {
+    let curDiff = diff();
+    let change = lastDiff - curDiff;
+    lastDiff = curDiff;
+    if (curDiff < 2) checkMaxPost();
+    if (change == 0) return;
+    // upward
+    if (change < 0 && bPullDown && curDiff > 2) {
+        if (scrollSus == 0) return togglePullDown();
+        scrollSus = Math.max(scrollSus - 1, 0);
+        return;
+    }
+    // downward
+    if (!bPullDown && curDiff < 2) togglePullDown();
 }
-chatViewport.onscroll = onChatScroll;
 
 // 이름마다 해시값을 구한 뒤 글자 색으로 설정
 let colorMap = {};
@@ -1896,7 +1892,6 @@ let checkMaxPost = () => {
         let removed = childNode[getElementsByClassName]('removed');
         if (removed && removed.length) removed[0].value = true;
         childNode.remove();
-        // chatPage.removeChild(childNode);
         pullDown(true);
     }
 }
@@ -1904,11 +1899,10 @@ let checkMaxPost = () => {
 // 채팅창 스크롤 고정 효과
 let _pullDown = () => chatViewport.scrollTop = chatPage.scrollHeight;
 pullDown = (bForced = false) => {
-    if (DEBUG) debug('pulldown', bBlockPullDownChange, bForced);
-    if (bBlockPullDownChange && bForced) _pullDown();
-    else request(() => {
-        if (bPullDown && (bForced || onScrollTimer == null)) _pullDown();
-    });
+    if (DEBUG) debug('pulldown', bForced);
+    scrollSus = bForced ? 1 : 0;
+    if (!bPullDown) return;
+    return _pullDown();
 };
 togglePullDown = () => {
     bPullDown = !bPullDown;
@@ -1988,10 +1982,9 @@ let newLine = async (postData, bNow = false) => {
             pullDown(true);
         })();
     }
-    
+
     // 글 본문
     if (num) {
-        // let iframes = [];
         titleDiv.id = getNotificationKey(num, 0);
         
         let postContent = createElement(divString, line, 'w.zero');
@@ -2016,7 +2009,36 @@ let newLine = async (postData, bNow = false) => {
             renderCloseAllButton();
 
             getPostContent(num).catch(debug).then(({text}) => {
-                postContentPage.innerHTML = text;
+                const iframes = text.matchAll(/<iframe[^>]*id="movieIcon([^"]*)"[^>]*>[^<]*<\/iframe>/g);
+                if (iframes && true) (async() => {
+                    for (const iframe of iframes) {
+                        const movieUrl = host + 'board/movie/movie_view?no=' + iframe[1];
+                        const movieText = await getAsText(movieUrl);
+                        if (!movieText) continue;
+                        const videoUrl = movieText.match(/<video[^>]*poster="([^"]*)"[^>]*>[^<]*<source[^>]*src="([^"]*)"[^>]*type="([^"]*)"[^>]*>/);
+                        if (!videoUrl) continue;
+                        const temp = createElement(divString, null, 'v-container');
+                        const wrap = createElement(divString, temp, 'video_wrap');
+                        createElement('source', 
+                            createElement('video', 
+                                createElement(divString, wrap, 'video_inbox'),
+                                {
+                                    controls: true,
+                                    playsinline: true,
+                                    controlslist: 'nodownload',
+                                    poster: videoUrl[1],
+                                    'data-no': iframe[1],
+                                },
+                                'dc_mv'
+                            ),
+                            { src: videoUrl[2], type: videoUrl[3] }
+                        );
+                        text = text.r(iframe[0], temp.outerHTML);
+                        temp.remove();
+                    }
+                    postContentPage.innerHTML = text;
+                })();
+                else postContentPage.innerHTML = text;
             });
         };
 
@@ -2028,9 +2050,6 @@ let newLine = async (postData, bNow = false) => {
                 splice(openedList, titleDiv);
                 addClass(postContent, 'zero');
                 removeClass(line, 'open');
-                timeout(() => {
-                    pullDown();
-                }, 500);
                 while (postContentPage.lastChild) {
                     postContentPage.lastChild.remove();
                 }
@@ -2210,7 +2229,7 @@ let newLine = async (postData, bNow = false) => {
     } else {
         showLine(line);
     }
-    checkMaxPost();
+    if (!bPullDown) checkMaxPost();
 };
 
 //#endregion
@@ -3104,7 +3123,6 @@ let getPostContent = async (num, bForce = false) => {
     if (!writer) return returnFunc();
     contentData.name = writer.getAttribute('data-nick');
     contentData.write = writeDiv;
-    // contentData.text = replaceImage(replaceEmbed(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML)))), 'pc-' + num);
     contentData.text = replaceImage(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML))), 'pc-' + num);
     let esno = parsed[querySelector]("[name='e_s_n_o']");
     if (esno) contentData.esno = esno.value;
@@ -3317,6 +3335,7 @@ updateCycle().then(() => {
     newLine({title: str_greeting});
     bGreeted = true;
     if (bWriteUnavailable) newLine({ title: str_notifyChatDisabled });
+    _pullDown();
 });
 
 // 글 쓰기
