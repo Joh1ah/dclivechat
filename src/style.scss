@@ -659,7 +659,7 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
     >.page {
         min-width: calc(100% - 2px);
         max-width: calc(100% - 2px);
-        padding: 2px 0 20px 0;
+        padding: 2px 0 12px 0;
         align-items: baseline;
         
         .notify .tt {
@@ -1088,8 +1088,13 @@ $inputHeight: 100px;
 
 .li-c { //login-info-container
     grid-row: 4;
-    .ex:hover {
-        background: $colorBackgroundLight;
+    .ex {
+        >.icon {
+            font-size: 12px;
+        }
+        &:hover {
+            background: linear-gradient($colorBackgroundLight 60%, transparent);
+        }
     }
     input {
         height: 10px;
