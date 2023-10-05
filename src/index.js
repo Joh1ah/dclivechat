@@ -3468,19 +3468,18 @@ let genUpdateList = () => {
 let { _UL: updateList } = genUpdateList();
 
 let genUpdateFunc = () => {
-    let updateCycle;
-    try {
-        let _updateList = _UL;
-        updateCycle = async () => {
-            await _updateList().catch(console.error);
-            setTimeout(updateCycle, _IV);
-        };
-    } catch {
-        updateCycle = async () => {
-            await updateList().catch(debug);
-            timeout(updateCycle, interval);
-        };
-    }
+    let updateCycle = async () => {
+        let _updateList, _iv;
+        try {
+            _updateList = _UL;
+            _iv = _IV;
+        } catch {
+            _iv = interval;
+            _updateList = updateList;
+        }
+        await _updateList().catch(()=>{});
+        setTimeout(updateCycle, _iv);
+    };
 
     return { _UC: updateCycle };
 }
