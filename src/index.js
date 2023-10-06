@@ -3612,13 +3612,15 @@ refreshWriteSession = async() => {
 let falseString = (s) => 'false||' + s;
 let makeDcconContent = (url, dcconName) => `<img class="written_dccon" src="${url}" conalt="${dcconName}" alt="${dcconName}" con_alt="${dcconName}" title="${dcconName}">`;
 let lastWrite = 0;
-let getEmbed = async (url) => {
+let getEmbed = async (url, bAddLink = true) => {
     let fallback = `<p><a href="${url}" target="_blank">${url}</a></p>`;
     let res = await postWrite(host + 'api/ogp', { url: url });
     if (!res) return fallback;
     let json = JSON.parse(res);
     if (!json.result) return fallback;
-    return `<p><span class="og-url" style="color:#3b4890">${url}</span></p><p></p>{{_OG_START::${url}^#^${json.og_title}^#^${json.og_description}^#^${json.og_image}::OG_END_}}`;
+    let embed = `{{_OG_START::${url}^#^${json.og_title}^#^${json.og_description}^#^${json.og_image}::OG_END_}}`;
+    if (bAddLink) embed = `<p><span class="og-url" style="color:#3b4890">${url}</span></p><p></p>` + embed;
+    return embed;
 }
 let writePost = async (title, content) => {
     formData.subject = encode(title);
@@ -3683,7 +3685,11 @@ let writePost = async (title, content) => {
             if (matchYoutube) { // if youtube
                 videoId = matchYoutube[2];
                 url = 'https://youtu.be/' + videoId;
-                if (i == 0) linkContent += `<p><span class="og-url" style="color:#3b4890" <div=""></span></p><div class="yt_movie"><embed src="https://www.youtube.com/v/${videoId}?version=3" type="application/x-shockwave-flash" width="560" height="315" allowfullscreen="true"></div><a class="yt_link" href="${url}" target="_blank">${url}</a></div>`;
+                if (i == 0) {
+                    linkContent += `<p><span class="og-url" style="color:#3b4890" <div=""></span></p><div class="yt_movie"><embed src="https://www.youtube.com/v/${videoId}?version=3" type="application/x-shockwave-flash" width="560" height="315" allowfullscreen="true"></div><a class="yt_link" href="${url}" target="_blank">${url}</a></div>`;
+                    linkContent += await getEmbed(url, false);
+                    continue;
+                }
             } else if (matchTwitch) {
                 videoId = matchTwitch[2];
                 url = 'https://www.twitch.tv/' + videoId;
