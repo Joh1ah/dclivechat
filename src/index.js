@@ -1628,7 +1628,7 @@ let _addVideo = (url) => {
 }
 
 let addVideo = (url) => {
-    debug('step 1', url);
+    if (DEBUG) debug('step 1', url);
     if (!url) return openAlert(str_noValidUrl);
     if (url == 'show log') return removeClass(logDiv, hidden);
     if (url == 'clear options') return clearSaveData();
@@ -1637,7 +1637,7 @@ let addVideo = (url) => {
     if (!/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/.test(url))
         return openAlert(str_noValidUrl);
     if (!/^[A-Za-z]+:\/\//.test(url)) url = 'https://' + url;
-    debug('step 2', url);
+    if(DEBUG) debug('step 2', url);
     _addVideo(url);
     if (before === 0 && loadedVideoUrls.length === 1) toggleMenu(false);
     renderRow();
