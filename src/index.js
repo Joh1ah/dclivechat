@@ -168,6 +168,8 @@ let str_settings_write = decode('7J6Q64-Z7Kek67CpIOuwjyDqvKzrpqzrp5A.');
 let str_settings_useZzal = decode('7J6Q64-Z7Kek67CpIOyCrOyaqQ..');
 /** "꼬리말 수정" */
 let str_settings_footer = decode('6rys66as66eQIOyImOyglQ..');
+/** "닉네임 아이콘 표시" */
+let str_settings_nikcon = decode('64uJ64Sk7J6EIOyVhOydtOy9mCDtkZzsi5w.');
 /** "채팅" */
 let str_chat = decode('7LGE7YyF');
 /** "삭제되었거나 존재하지 않는 게시물입니다." */
@@ -3127,6 +3129,8 @@ createOption(str_settings_lowLatency, () => setIntervalIndex(1), () => setInterv
 createOption(str_settings_chatOnly, () => addClass(main, 'co'), () => removeClass(main, 'co'));
 
 // page: chat
+// 닉네임 아이콘 표시
+createOption(str_settings_nikcon, () => removeClass(chatPage, 'hn'), () => addClass(chatPage, 'hn'), false, optionsChat);
 // 반고닉 아이디 표시
 createOption(str_settings_showUnfixId, () => {
     removeClass(chatPage, 'hu');
@@ -3449,7 +3453,8 @@ let genUpdateList = () => {
                 _getAttributeTo(writer, 'data-nick', postData, 'nickname');
                 _getAttributeTo(writer, 'data-uid', postData, 'id');
                 _getAttributeTo(writer, 'data-ip', postData, 'ip');
-                let nikcon = writer.match('<img[^>]*src="([^"]+)"[^>]*>');
+                let nikcon = writer.match(/<img[^>]*src=["|']([^"']+)["|']/);
+                _debug(writer, nikcon);
                 if (nikcon) {
                     let img = nikcon[1];
                     postData.img = img;

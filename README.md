@@ -4,7 +4,7 @@
 
 <img src="https://nstatic.dcinside.com/dc/w/images/logo_icon.ico" style="width:1em;height:1em"> [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.2.3-20231005`
+최신 버전: `2.2.4-20231007`
 
 <br>
 
@@ -55,6 +55,9 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 <br>
 
 ## Changelog
+v2.2.4-20231007
+* 닉네임 아이콘 표시 옵션 추가
+
 v2.2.3-20231005
 * 성능 개선
     * 글 목록 업데이트 시 메모리 사용량 개선
