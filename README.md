@@ -4,7 +4,7 @@
 
 <img src="https://nstatic.dcinside.com/dc/w/images/logo_icon.ico" style="width:1em;height:1em"> [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.2.2-20231001`
+최신 버전: `2.2.3-20231005`
 
 <br>
 
@@ -55,6 +55,16 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 <br>
 
 ## Changelog
+v2.2.3-20231005
+* 성능 개선
+    * 글 목록 업데이트 시 메모리 사용량 개선
+    * 글 목록 업데이트를 백그라운드에서 실행하도록 변경
+    * 필요 시에만 디시콘 정보를 불러오도록 수정
+* 버그 수정
+    * 임베드 링크가 깨져보이는 문제 수정
+    * 작은 용량의 이미지 첨부 문제 수정
+* 기타 UI 개선
+
 v2.2.2-20231001
 * 글에 첨부된 동영상이 제대로 표시되지 않는 문제 수정
 * 부드러운 스크롤 애니메이션 사용 시 포커스가 풀리는 문제 수정

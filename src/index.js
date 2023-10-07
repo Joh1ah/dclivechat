@@ -263,7 +263,7 @@ let bMobileSafari = bMobileDevice && /Safari/i.test(navigator.userAgent);
 
 let intervalPresets = [ 4000, 2500 ];
 let minInterval = 2000; 
-let maxPost = 60;
+let maxPost = 80;
 let maxCommentOnPage = 20;
 let maxOpened = 5;
 let commentSignitureLength = 8;
@@ -302,7 +302,7 @@ let grecaptchaBlock = '6Lc-Fr0UAAAAAOdqLYqPy53MxlRMIXpNXFvBliwI';
 let sub = 'subdirectory_arrow_right';
 let arrow = 'arrow_downward';
 
-function newRegex(string, g = true) {
+let newRegex = (string, g = true) => {
     string = string.r('?', '\\?');
     if (g) return new RegExp(string, 'g');
     return new RegExp(string);
@@ -379,6 +379,7 @@ let newPostCount = 0;
 let bPullDown = true;
 let firstUpdate = true;
 let bGreeted = false;
+let scrollSus = 99999;
 
 // (유동) 로그인 입력란 관련
 let bFormExpanded = true;
@@ -394,7 +395,7 @@ let pullDown;
 let togglePullDown;
 let toggleExpander;
 
-let scrollSus = 99999;
+let worker = null;
 
 // 전역 변수 매크로
 let isPostingWrite = () => (targetPostNum == 0);
@@ -442,8 +443,7 @@ let escapeHtml = (unsafe) => {
 };
 let trimHtml = (string) => {
     return string
-        .r(/\n/g, '')
-        .r(/\r/g, '')
+        .r(/(\r|\t)/g, '')
         .r(/[ ]{2,}/g, ' ');
 };
 function buf2hex(buffer) {
@@ -535,7 +535,6 @@ let bytes = (size) => {
             let fixed = 2;
             while (true) {
                 if (devided < thres) return devided.toFixed(fixed) + bytesUnits[unitIndex];
-                fixed--;
                 thres *= 10;
             }
         }
@@ -610,9 +609,6 @@ let getListUrl = () => getBoardUrl() + 'lists?id=' + gallId;
 let getWriteUrl = () => getBoardUrl() + 'write/?id=' + gallId;
 let getPostUrl = (num) => getBoardUrl() + 'view/?id=' + gallId + '&no=' + num;
 
-// 기타 매크로
-let testFix = (string) => /fix/.test(string);
-
 // Fetch
 let serializeForm = (...datas) => {
     let body = '';
@@ -674,17 +670,112 @@ let getSecondServiceCode = (code, secret) => {
     return code.r(/(.{10})$/, c);
 }
 
+// worker support
+let genUtil = () => {
+    let savedRegexHtml = {};
+    let _getHtml = (text, tagName, className) => {
+        let regex;
+        let key = tagName + className;
+        if (savedRegexHtml[key] !== undefined) regex = savedRegexHtml[key];
+        else {
+            let regexString = `<${tagName}[^>]*class="[^"]*${className}[^"]*"[^>]*>(.+?)<\/${tagName}>`;
+            regex = new RegExp(regexString);
+            savedRegexHtml[key] = regex;
+        }
+        let match = text.match(regex);
+        if (!match) return null;
+        return match;
+    }
+    let getInnerHtml = (text, tagName, className) => {
+        let match = _getHtml(text, tagName, className);
+        if (!match) return '';
+        else return match[1];
+    }
+    let getOuterHtml = (text, tagName, className) => {
+        let match = _getHtml(text, tagName, className);
+        if (!match) return '';
+        else return match[0];
+    }
+    let getInnerText = (text, tagName, className) => {
+        let innerText = '';
+        let innerHtml = getInnerHtml(text, tagName, className);
+        if (!innerHtml) return '';
+        for (let match of innerHtml.matchAll(/(>|$)(.*?)(<|^)/g)) {
+            innerText += match[2].trim();
+        }
+        return innerText;
+    }
+    let savedRegexAttr = {};
+    let getAttributeTo = (text, attrName, output, propName) => {
+        let attr = getAttribute(text, attrName);
+        if (attr == null) return;
+        output[propName] = attr;
+    }
+    let getAttribute = (text, attrName) => {
+        let regex;
+        if (savedRegexAttr[attrName] !== undefined) regex = savedRegexAttr[attrName];
+        else {
+            regex = new RegExp(`${attrName}="([^"]+)"`);
+            savedRegexAttr[attrName] = regex;
+        }
+        let match = text.match(regex);
+        if (!match) return null;
+        return match[1];
+    }
+
+    // 기타 매크로
+    let testFix = (string) => /fix/.test(string);
+
+    let _debug;
+    try {
+        _debug = debug;
+    } catch {
+        _debug = console.error;
+    }
+
+    return {
+        _IH: getInnerHtml,
+        _OH: getOuterHtml,
+        _IT: getInnerText,
+        _AT: getAttributeTo,
+        _A: getAttribute,
+        _TF: testFix,
+        _DEBUG: _debug,
+    };
+};
+let {
+    _IH: getInnerHtml,
+    _OH: getOuterHtml,
+    _IT: getInnerText,
+    _AT: getAttributeTo,
+    _A: getAttribute,
+    _TF: testFix,
+    _DEBUG: _debug,
+} = genUtil();
+
+
 //#endregion
 
 //#region Fetch 함수
 
 // GET
-let getAsText = async (url, options = {}) => {
-    if (!options.credentials) options.credentials = 'include';
-    let res = await fetch(url, options).catch(debug);
-    if (!res || !res.ok) return '';
-    return res.text().catch(debug);
-};
+let genFetch = () => {
+    let _debug;
+    try {
+        _debug = _DEBUG;
+    } catch {
+        _debug = debug;
+    }
+    let getAsText = async (url, options = {}) => {
+        if (!options.credentials) options.credentials = 'include';
+        let res = await fetch(url, options).catch(_debug);
+        if (!res || !res.ok) return '';
+        return res.text().catch(_debug);
+    };
+    return { _TEXT: getAsText };
+}
+let { _TEXT: getAsText } = genFetch();
+
 let getAsDocument = async (url) => {
     let text = await getAsText(url, { referrer: getListUrl() }).catch(debug);
     return text ? parseHtml(text) : null;
@@ -1091,7 +1182,10 @@ let replaceImage = (string, id) => {
     return string;
 };
 
-let setIntervalIndex = (index) => interval = intervalPresets[index];
+let setIntervalIndex = (index) => {
+    interval = intervalPresets[index];
+    if (worker) worker.postMessage({type:'iv', iv: interval});
+};
 
 let updateFormData = (html, data) => {
     for (let id in data) {
@@ -1534,7 +1628,7 @@ let _addVideo = (url) => {
 }
 
 let addVideo = (url) => {
-    debug('step 1', url);
+    if (DEBUG) debug('step 1', url);
     if (!url) return openAlert(str_noValidUrl);
     if (url == 'show log') return removeClass(logDiv, hidden);
     if (url == 'clear options') return clearSaveData();
@@ -1543,7 +1637,7 @@ let addVideo = (url) => {
     if (!/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/.test(url))
         return openAlert(str_noValidUrl);
     if (!/^[A-Za-z]+:\/\//.test(url)) url = 'https://' + url;
-    debug('step 2', url);
+    if(DEBUG) debug('step 2', url);
     _addVideo(url);
     if (before === 0 && loadedVideoUrls.length === 1) toggleMenu(false);
     renderRow();
@@ -2305,7 +2399,7 @@ onLoginChecked = () => {
     } else {
         addClass(loginInfoContainer, hidden);
     }
-    refreshWriteSession();
+    refreshWriteSession?.();
 }
 let getNickname = () => inputNickname.value ?? '';
 let getNicknameV2 = () => anonymousNickname ? anonymousNickname : (bLogin ? userNickname : getNickname());
@@ -2523,16 +2617,21 @@ onApplyFunc['dccon'] = (infos) => {
 }
 
 let panelHidden = true;
+let bPopulated = false;
 let togglePanel = () => {
     panelHidden = !panelHidden;
     if (panelHidden) {
         removeClass(dcconIcon, 'f');
         addClass(dcconPanel, hidden);
-    }
-    else {
+    } else {
         input.focus();
         addClass(dcconIcon, 'f');
-        removeClass(dcconPanel, hidden)
+        removeClass(dcconPanel, hidden);
+        if (!bPopulated) {
+            bPopulated = true;
+            populatePackage('recent');
+            populatePackage('icon');
+        }
     };
     request(() => input.focus());
 }
@@ -3233,85 +3332,7 @@ let getPostComment = async (num) => {
 
 let myPosts = [];
 
-let updateList = async (force = false) => {
-    let now = getNow();
-    // abort when posting or already updated few secones ago
-    if (posting || (!force && now - lastUpdate < interval)) return lastUpdate = now;
-    lastUpdate = now;
-    let url = getListUrl();
-    let gall = await getAsDocument(url).catch(debug);
-    if (!gall) return;
-    let postDatas = [];
-    let posts = gall[getElementsByClassName]('us-post');
-    for (let post of posts) {
-        // 차단된 유저 건너뜀
-        if (post.classList.contains('block-disable')) continue;
-        let postData = {
-            num: 0,
-            subject: '',
-            title: '',
-            nickname: '',
-            id: '',
-            ip: '',
-            date: 0,
-            img: '',
-            fix: false,
-            count: 0,
-        };
-        let num = parse(post.getAttribute('data-no'));
-        postData.num = num;
-
-        let reply = post[querySelector]('span.reply_num');
-        let lastCount = postCommentCount[num] ?? 0;
-        let count = 0;
-        if (reply) {
-            let countString = reply.innerHTML;
-            count = parse(countString.substring(1, countString.length - 1));
-            if (count) postData.count = count;
-        }
-        // skip when the post is older than last post
-        if (num <= lastNum) {
-            if (count != lastCount) onPostCommentCountChanged[num]?.(count, firstUpdate);
-            continue;
-        }
-        let titles = post[getElementsByClassName]('gall_tit');
-        if (titles.length) {
-            postData.title = titles[0][getElementsByTagName]('a')[0].innerText.r('\n', '').r('\r', '').trim();
-        }
-        let numString = post[getElementsByClassName]('gall_num')[0].innerText;
-        
-        if (numString == str_survey || numString == str_notice || numString == 'AD') continue; // 말머리 없음
-        let subjects = post[getElementsByClassName]('gall_subject');
-        if (subjects.length) {
-            let subject = subjects[0].innerText.trim();
-            postData.subject = subject;
-            if (subject == str_survey || subject == str_notice || subject == 'AD') continue; // 말머리 있음
-        }
-        let writers = post[getElementsByClassName]('gall_writer');
-        if (writers.length) {
-            let writer = writers[0];
-            let element = writer.attributes.getNamedItem('data-nick');
-            if (element) postData.nickname = element.value;
-            element= writer.attributes.getNamedItem('data-uid');
-            if (element) postData.id = element.value;
-            element = writer.attributes.getNamedItem('data-ip');
-            if (element) postData.ip = element.value;
-            element = writer[getElementsByClassName]('writer_nikcon');
-            if (element && element.length) {
-                let img = postData.img = element[0][getElementsByTagName]('img')[0].src
-                postData.img = img;
-                postData.fix = testFix(img);
-            };
-        }
-        let dates = post[getElementsByClassName]('gall_date');
-        if (dates && dates.length) {
-            postData.date = Date.parse(dates[0].getAttribute('title'));
-        }
-        postDatas.push(postData);
-    }
-
-    gall.remove();
-
+let onPostData = async (postDatas) => {
     if (postDatas.length == 0) return;
     postDatas = postDatas.sort((a, b) => a.num - b.num);
     let lastNumCur = 0;
@@ -3323,20 +3344,189 @@ let updateList = async (force = false) => {
         lastNumCur = Math.max(lastNumCur, postData.num);
     }
     lastNum = Math.max(lastNum, lastNumCur);
+    if (worker) worker.postMessage({ type: 'ln', n: lastNum });
     firstUpdate = false;
-}
-
-let updateCycle = async() => {
-    await updateList().catch(debug);
-    timeout(updateCycle, interval);
 };
+
+let genUpdateList = () => {
+    let updateList;
+    let _debug, _url, _getAsText, _postCommentCount;
+    let _onChange, _onPostData;
+    let _getInnerText, _getInnerHtml, _getOuterHtml, _getAttributeTo, _getAttribute, _testFix;
+    let _str_survey, _str_notice;
+    let _parse;
+    let _lastNum;
+    try {
+        _debug = _DEBUG;
+        _url = _URL;
+        _getAsText = _TEXT;
+        _postCommentCount = {};
+        _onChange = (n, c) => self.postMessage({type:'cc',n,c});
+        _onPostData = async (d) => self.postMessage({type:'pd',d});
+        _getInnerText = _IT;
+        _getInnerHtml = _IH;
+        _getOuterHtml = _OH;
+        _getAttributeTo = _AT;
+        _getAttribute = _A;
+        _testFix = _TF;
+        _str_survey = _SS;
+        _str_notice = _SN;
+        _parse = Number.parseInt;
+        _lastNum = () => _LN;
+    } catch {
+        _debug = debug;
+        _url = getListUrl();
+        _getAsText = getAsText;
+        _postCommentCount = postCommentCount;
+        _onChange = (n, c) => onPostCommentCountChanged[n]?.(c, firstUpdate);
+        _onPostData = onPostData;
+        _getInnerText = getInnerText;
+        _getInnerHtml = getInnerHtml;
+        _getOuterHtml = getOuterHtml;
+        _getAttributeTo = getAttributeTo;
+        _getAttribute = getAttribute;
+        _testFix = testFix;
+        _str_survey = str_survey;
+        _str_notice = str_notice;
+        _parse = parse;
+        _lastNum = () => lastNum;
+    }
+    let unescapeHtml = (safe) => {
+        return safe
+            .replace(/&amp;/g, '&')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&#035;/g, '#')
+            .replace(/&#039;/g, `'`)
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"');
+    }
+    updateList = async () => {
+        let text = await _getAsText(_url).catch(_debug);
+        if (!text) return;
+        text = text.replace(/(\n|\r|\t)/g, ''); // use replace instead of r due to worker compatibility
+        let postDatas = [];
+        for (let match of text.matchAll(/<tr[^>]*class="([^"]*us-post[^"]*)"[^>]*data-no="([^"]*)".+?(?=<\/tr>)/g)) {
+            let post = match[0];
+            // 차단된 유저 건너뜀
+            if (match[1].includes('block-disable')) continue;
+            let postData = {
+                num: 0,
+                subject: '',
+                title: '',
+                nickname: '',
+                id: '',
+                ip: '',
+                date: 0,
+                img: '',
+                fix: false,
+                count: 0,
+            };
+            let num = _parse(match[2]);
+            postData.num = num;
+            let reply = post.match(/<span[^>]*class="[^"]*reply_num[^>]*"[^>]*>\[([0-9]+)\]<\/span>/);
+            let lastCount = _postCommentCount[num] ?? 0; // worker support
+            let count = 0;
+            if (reply) {
+                count = _parse(reply[1]);
+                if (count) postData.count = count;
+            }
+            // skip when the post is older than last post
+            if (num <= _lastNum()) {
+                if (count != lastCount) _onChange(num, count);
+                continue;
+            }
+            let title = _getInnerText(post, 'td', 'gall_tit');
+            if (reply) title = title.slice(0, title.length - reply[1].length - 2);
+            postData.title = unescapeHtml(title);
+            let numString = _getInnerHtml(post, 'td', 'gall_num');
+            if (numString == _str_survey || numString == _str_notice || numString == 'AD') continue; // 말머리 없음
+            let subject = _getInnerText(post, 'td', 'gall_subject');
+            postData.subject = unescapeHtml(subject);
+            if (subject == _str_survey || subject == _str_notice || subject == 'AD') continue; // 말머리 있음
+            let writer = _getOuterHtml(post, 'td', 'gall_writer');
+            if (writer) {
+                _getAttributeTo(writer, 'data-nick', postData, 'nickname');
+                _getAttributeTo(writer, 'data-uid', postData, 'id');
+                _getAttributeTo(writer, 'data-ip', postData, 'ip');
+                let nikcon = writer.match('<img[^>]*src="([^"]+)"[^>]*>');
+                if (nikcon) {
+                    let img = nikcon[1];
+                    postData.img = img;
+                    postData.fix = _testFix(img);
+                }
+            }
+            let dates = _getOuterHtml(post, 'td', 'gall_date');
+            let date = _getAttribute(dates, 'title');
+            if (date !== null) postData.date = Date.parse(date);
+            postDatas.push(postData);
+        }
+        await _onPostData(postDatas);
+    }
+    return { _UL: updateList };
+}
+let { _UL: updateList } = genUpdateList();
+
+let genUpdateFunc = () => {
+    let updateCycle = async () => {
+        let _updateList, _iv;
+        try {
+            _updateList = _UL;
+            _iv = _IV;
+        } catch {
+            _iv = interval;
+            _updateList = updateList;
+        }
+        await _updateList().catch(()=>{});
+        setTimeout(updateCycle, _iv);
+    };
+
+    return { _UC: updateCycle };
+}
+let { _UC: updateCycle } = genUpdateFunc();
+
 // 업데이트 시작
-updateCycle().then(() => {
+if (!window.Worker) updateCycle().then(() => {
     newLine({title: str_greeting});
     bGreeted = true;
     if (bWriteUnavailable) newLine({ title: str_notifyChatDisabled });
     _pullDown();
 });
+else { // use worker at background
+    let blob = new Blob([
+        // `let IS_WORKER=true;`,
+        `let _URL='${getListUrl()}';`,
+        `let _IV=${interval};`,
+        `let _LN=${lastNum};`,
+        `let _SS='${str_survey}';`,
+        `let _SN='${str_notice}';`,
+        `let{_IH,_OH,_IT,_AT,_A,_TF,_DEBUG}=(${genUtil.toString()})();`,
+        `let{_TEXT}=(${genFetch.toString()})();`,
+        `let{_UL}=(${genUpdateList.toString()})();`,
+        `let{_UC}=(${genUpdateFunc.toString()})();`,
+        `self.onmessage=async(e)=>{switch(e.data.type){case'iv':_IV=e.data.iv;break;case'ln':_LN=e.data.n;break;}};`,
+        `_UC();`,
+    ], { type: 'text/javascript' });
+    let url = URL.createObjectURL(blob);
+    worker = new Worker(url);
+    worker.onerror = debug;
+    worker.onmessage = async (e) => {
+        let data = e.data;
+        if (data && data.type) {
+            if (data.type == 'pd') {
+                await onPostData(data.d);
+                if (!bGreeted) {
+                    newLine({title: str_greeting});
+                    bGreeted = true;
+                    if (bWriteUnavailable) newLine({ title: str_notifyChatDisabled });
+                    _pullDown();
+                }
+                return;
+            }
+            if (data.type == 'cc') return onPostCommentCountChanged[data.n]?.(data.c, firstUpdate);
+        }
+    };
+}
 
 // 글 쓰기
 let formData = {
@@ -3422,12 +3612,15 @@ refreshWriteSession = async() => {
 let falseString = (s) => 'false||' + s;
 let makeDcconContent = (url, dcconName) => `<img class="written_dccon" src="${url}" conalt="${dcconName}" alt="${dcconName}" con_alt="${dcconName}" title="${dcconName}">`;
 let lastWrite = 0;
-let getEmbed = async (url) => {
+let getEmbed = async (url, bAddLink = true) => {
+    let fallback = `<p><a href="${url}" target="_blank">${url}</a></p>`;
     let res = await postWrite(host + 'api/ogp', { url: url });
-    if (!res) return `<p><a href="${url}" target="_blank">${url}</a></p>`;
+    if (!res) return fallback;
     let json = JSON.parse(res);
-    if (!json.result) return `<p><a href="${url}" target="_blank">${url}</a></p>`;
-    return `{{_OG_START::${url}^#^${json.og_title}^#^${json.og_description}^#^${json.og_image}::OG_END_}}`;
+    if (!json.result) return fallback;
+    let embed = `{{_OG_START::${url}^#^${json.og_title}^#^${json.og_description}^#^${json.og_image}::OG_END_}}`;
+    if (bAddLink) embed = `<p><span class="og-url" style="color:#3b4890">${url}</span></p><p></p>` + embed;
+    return embed;
 }
 let writePost = async (title, content) => {
     formData.subject = encode(title);
@@ -3492,7 +3685,11 @@ let writePost = async (title, content) => {
             if (matchYoutube) { // if youtube
                 videoId = matchYoutube[2];
                 url = 'https://youtu.be/' + videoId;
-                if (i == 0) linkContent += `<p><span class="og-url" style="color:#3b4890" <div=""></span></p><div class="yt_movie"><embed src="https://www.youtube.com/v/${videoId}?version=3" type="application/x-shockwave-flash" width="560" height="315" allowfullscreen="true"></div><a class="yt_link" href="${url}" target="_blank">${url}</a></div>`;
+                if (i == 0) {
+                    linkContent += `<p><span class="og-url" style="color:#3b4890" <div=""></span></p><div class="yt_movie"><embed src="https://www.youtube.com/v/${videoId}?version=3" type="application/x-shockwave-flash" width="560" height="315" allowfullscreen="true"></div><a class="yt_link" href="${url}" target="_blank">${url}</a></div>`;
+                    linkContent += await getEmbed(url, false);
+                    continue;
+                }
             } else if (matchTwitch) {
                 videoId = matchTwitch[2];
                 url = 'https://www.twitch.tv/' + videoId;
@@ -3698,8 +3895,8 @@ submit.onclick = async() => {
 //#endregion
 
 loadOptions();
-populatePackage('recent');
-populatePackage('icon');
+// populatePackage('recent');
+// populatePackage('icon');
 if (loadedVideoUrls.length !== 0) toggleMenu(false);
 
 // 업데이트 및 최초실행 안내창

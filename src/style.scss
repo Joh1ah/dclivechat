@@ -51,6 +51,7 @@ body, button, input, select, table, textarea, * {
 html {
     min-height: 100vh;
     min-height: 100svh;
+    background: black;
 }
 body {
     // color
@@ -401,12 +402,6 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
 
     >.sb {
         margin: 10px;
-    }
-}
-
-.p, .modal {
-    >.b.abs-tr {
-        // margin: 2px;
     }
 }
 
