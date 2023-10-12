@@ -1887,7 +1887,7 @@ let refresh = createElement('a', header, {
     [onclick]: () => {
         if (bRefreshing) return;
         bRefreshing = true;
-        initUpdate();
+        initUpdate('button');
         addClass(refreshIcon, 'rotate-ccw-half');
         timeout(() => {
             bRefreshing = false;
@@ -3423,7 +3423,6 @@ let onPostData = async (postDatas, bForced = false) => {
 };
 
 let genUpdateList = () => {
-    let updateList;
     let _debug, _url, _getAsText, _postCommentCount;
     let _onChange, _onPostData;
     let _getInnerText, _getInnerHtml, _getOuterHtml, _getAttributeTo, _getAttribute, _testFix;
@@ -3475,67 +3474,71 @@ let genUpdateList = () => {
             .replace(/&gt;/g, '>')
             .replace(/&quot;/g, '"');
     }
-    updateList = async () => {
+    let updateList = async () => {
         let text = await _getAsText(_url);
         if (!text) return;
-        text = text.replace(/(\n|\r|\t)/g, ''); // use replace instead of r due to worker compatibility
-        let postDatas = [];
-        for (let match of text.matchAll(/<tr[^>]*class="([^"]*us-post[^"]*)"[^>]*data-no="([^"]*)".+?(?=<\/tr>)/g)) {
-            let post = match[0];
-            // 차단된 유저 건너뜀
-            if (match[1].includes('block-disable')) continue;
-            let postData = {
-                num: 0,
-                subject: '',
-                title: '',
-                nickname: '',
-                id: '',
-                ip: '',
-                date: 0,
-                img: '',
-                fix: false,
-                count: 0,
-            };
-            let num = _parse(match[2]);
-            postData.num = num;
-            let reply = post.match(/<span[^>]*class="[^"]*reply_num[^>]*"[^>]*>\[([0-9]+)\]<\/span>/);
-            let lastCount = _postCommentCount[num] ?? 0; // worker support
-            let count = 0;
-            if (reply) {
-                count = _parse(reply[1]);
-                if (count) postData.count = count;
-            }
-            // skip when the post is older than last post
-            if (num <= _lastNum()) {
-                if (count != lastCount) _onChange(num, count);
-                continue;
-            }
-            let title = _getInnerText(post, 'td', 'gall_tit');
-            if (reply) title = title.slice(0, title.length - reply[1].length - 2);
-            postData.title = unescapeHtml(title);
-            let numString = _getInnerHtml(post, 'td', 'gall_num');
-            if (numString == _str_survey || numString == _str_notice || numString == 'AD') continue; // 말머리 없음
-            let subject = _getInnerText(post, 'td', 'gall_subject');
-            postData.subject = unescapeHtml(subject);
-            if (subject == _str_survey || subject == _str_notice || subject == 'AD') continue; // 말머리 있음
-            let writer = _getOuterHtml(post, 'td', 'gall_writer');
-            if (writer) {
-                _getAttributeTo(writer, 'data-nick', postData, 'nickname');
-                _getAttributeTo(writer, 'data-uid', postData, 'id');
-                _getAttributeTo(writer, 'data-ip', postData, 'ip');
-                let nikcon = writer.match(/<img[^>]*src=["']([^"']+)["']/);
-                if (nikcon) {
-                    let img = nikcon[1];
-                    postData.img = img;
-                    postData.fix = _testFix(img);
+        try {
+            text = text.replace(/(\n|\r|\t)/g, ''); // use replace instead of r due to worker compatibility
+            let postDatas = [];
+            for (let match of text.matchAll(/<tr[^>]*class="([^"]*us-post[^"]*)"[^>]*data-no="([^"]*)".+?(?=<\/tr>)/g)) {
+                let post = match[0];
+                // 차단된 유저 건너뜀
+                if (match[1].includes('block-disable')) continue;
+                let postData = {
+                    num: 0,
+                    subject: '',
+                    title: '',
+                    nickname: '',
+                    id: '',
+                    ip: '',
+                    date: 0,
+                    img: '',
+                    fix: false,
+                    count: 0,
+                };
+                let num = _parse(match[2]);
+                postData.num = num;
+                let reply = post.match(/<span[^>]*class="[^"]*reply_num[^>]*"[^>]*>\[([0-9]+)\]<\/span>/);
+                let lastCount = _postCommentCount[num] ?? 0; // worker support
+                let count = 0;
+                if (reply) {
+                    count = _parse(reply[1]);
+                    if (count) postData.count = count;
                 }
+                // skip when the post is older than last post
+                if (num <= _lastNum()) {
+                    if (count != lastCount) _onChange(num, count);
+                    continue;
+                }
+                let title = _getInnerText(post, 'td', 'gall_tit');
+                if (reply) title = title.slice(0, title.length - reply[1].length - 2);
+                postData.title = unescapeHtml(title);
+                let numString = _getInnerHtml(post, 'td', 'gall_num');
+                if (numString == _str_survey || numString == _str_notice || numString == 'AD') continue; // 말머리 없음
+                let subject = _getInnerText(post, 'td', 'gall_subject');
+                postData.subject = unescapeHtml(subject);
+                if (subject == _str_survey || subject == _str_notice || subject == 'AD') continue; // 말머리 있음
+                let writer = _getOuterHtml(post, 'td', 'gall_writer');
+                if (writer) {
+                    _getAttributeTo(writer, 'data-nick', postData, 'nickname');
+                    _getAttributeTo(writer, 'data-uid', postData, 'id');
+                    _getAttributeTo(writer, 'data-ip', postData, 'ip');
+                    let nikcon = writer.match(/<img[^>]*src=["']([^"']+)["']/);
+                    if (nikcon) {
+                        let img = nikcon[1];
+                        postData.img = img;
+                        postData.fix = _testFix(img);
+                    }
+                }
+                let dates = _getOuterHtml(post, 'td', 'gall_date');
+                let date = _getAttribute(dates, 'title');
+                if (date !== null) postData.date = Date.parse(date);
+                postDatas.push(postData);
             }
-            let dates = _getOuterHtml(post, 'td', 'gall_date');
-            let date = _getAttribute(dates, 'title');
-            if (date !== null) postData.date = Date.parse(date);
-            postDatas.push(postData);
+            await _onPostData(postDatas);
+        } catch (e) {
+            _debug('here', e);
         }
-        await _onPostData(postDatas);
     }
     return { _UL: updateList };
 }
@@ -3543,17 +3546,19 @@ let { _UL: updateList } = genUpdateList();
 
 let genUpdateFunc = () => {
     let updateCycle = async () => {
-        let _updateList, _iv, _loop;
+        let _updateList, _iv, _loop, _debug;
         try {
             _updateList = _UL;
             _iv = _IV;
             _loop = () => { };
+            _debug = _DEBUG;
         } catch {
             _iv = interval;
             _updateList = updateList;
             _loop = (id) => loop = id;
+            _debug = debug;
         }
-        await _updateList().catch(() => { postMessage({type: 'err'}); });
+        await _updateList().catch((e) => { _debug(e); postMessage({type: 'err'}); });
         _loop(setTimeout(updateCycle, _iv));
     };
 
@@ -3561,8 +3566,8 @@ let genUpdateFunc = () => {
 }
 let { _UC: updateCycle } = genUpdateFunc();
 
-let initUpdate = () => {
-    debug('init update');
+let initUpdate = (...reason) => {
+    debug('init update', ...reason);
     bFirstUpdate = true;
     if (bWorkerAvailable) {
         if (worker) worker.terminate();
@@ -3583,14 +3588,14 @@ let initUpdate = () => {
         worker = new Worker(url);
         worker.onerror = (...any) => {
             debug(...any);
-            initUpdate();
+            initUpdate('error', ...any);
         };
         worker.onmessage = async (e) => {
             let data = e.data;
             if (data && data.type) {
                 if (data.type == 'pd') return await onPostData(data.d);
                 if (data.type == 'cc') return onPostCommentCountChanged[data.n]?.(data.c, bFirstUpdate);
-                if (data.type == 'err') return initUpdate();
+                if (data.type == 'err') return initUpdate('worker err');
             }
         };
     } else {
