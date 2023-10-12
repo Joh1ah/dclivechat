@@ -4,7 +4,7 @@
 
 <img src="https://nstatic.dcinside.com/dc/w/images/logo_icon.ico" style="width:1em;height:1em"> [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.2.4-20231007`
+최신 버전: `2.2.4-20231011`
 
 <br>
 
@@ -55,8 +55,10 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 <br>
 
 ## Changelog
-v2.2.4-20231007
+v2.2.4-20231011
+* 오류 발생 시 채팅창 강제 새로고침 기능 추가
 * 닉네임 아이콘 표시 옵션 추가
+* 글 본문에 디시콘이 제대로 올라가지 않던 문제 수정
 
 v2.2.3-20231005
 * 성능 개선

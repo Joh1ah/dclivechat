@@ -180,6 +180,8 @@ let str_notice = decode('6rO17KeA');
 let str_survey = decode('7ISk66y4');
 /** "채팅방에 오신 것을 환영합니다!" */
 let str_greeting = decode('7LGE7YyF67Cp7JeQIOyYpOyLoCDqsoPsnYQg7ZmY7JiB7ZWp64uI64ukIQ..');
+/** "채팅창에 다시 연결했습니다." */
+let str_reconnected = decode('7LGE7YyF7LC97JeQIOuLpOyLnCDsl7DqsrDtlojsirXri4jri6Qu');
 /** "알 수 없는 오류" */
 let str_error_generic = decode('7JWMIOyImCDsl4bripQg7Jik66WY');
 /** "알 수 없는 오류 (block_key)" */
@@ -250,6 +252,8 @@ let str_update = decode('67KE7KCEIOyXheuNsOydtO2KuOuQqA..');
 let str_features = decode('7J6Q64-Z7Kek67Cp6rO8IOq8rOumrOunkCDquLDriqXsnYQg7LaU6rCA7ZaI7Iq164uI64ukIQ..');
 /** "전체 변경사항 보기" */
 let str_changelog = decode('7KCE7LK0IOuzgOqyveyCrO2VrSDrs7TquLA.');
+/** "구매하지 않은 디시콘입니다." */
+let str_notBought = decode('6rWs66ek7ZWY7KeAIOyViuydgCDrlJTsi5zsvZjsnoXri4jri6Qu');
 
 //#endregion
 
@@ -259,11 +263,12 @@ let doc = document;
 let body = doc.body;
 let head = doc.head;
 let storage = localStorage ?? null;
+let bWorkerAvailable = window.Worker && true;
 
 let bMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 let bMobileSafari = bMobileDevice && /Safari/i.test(navigator.userAgent);
 
-let intervalPresets = [ 4000, 2500 ];
+let intervalPresets = [ 5000, 3000 ];
 let minInterval = 2000; 
 let maxPost = 80;
 let maxCommentOnPage = 20;
@@ -280,6 +285,7 @@ let querySelector = 'querySelector';
 let innerText = 'innerText';
 let placeholder = 'placeholder';
 let onclick = 'onclick';
+let globalCompositeOperation = 'globalCompositeOperation';
 
 // document에 할당하여 실행할 전역 함수 이름
 let appName = 'dclivechat';
@@ -373,13 +379,11 @@ let targetCommentNum = 0;
 let lastSigniture = '';
 
 // 채팅창 관련
-let lastUpdate = 0;
 let interval = intervalPresets[0];
 let lastNum = 0;
-let posting = false;
 let newPostCount = 0;
 let bPullDown = true;
-let firstUpdate = true;
+let bFirstUpdate = true;
 let bGreeted = false;
 let scrollSus = 99999;
 
@@ -397,6 +401,7 @@ let pullDown;
 let togglePullDown;
 let toggleExpander;
 
+let loop = null;
 let worker = null;
 
 // 전역 변수 매크로
@@ -882,65 +887,41 @@ let postDeleteImage = (imgNum) => {
 
 //#region 디시콘 함수
 
-let dcconSavedInfo = {};
-let dcconSavedInfoReversed = {};
-let dcconSavedInfoImgCode = {};
-let dcconSavedInfoIdx = {};
-let dcconPreload = () => getOption('dccon') ?? {};
-
-let onPackageDetail;
+let savedDccons = {};
+let savedPackageTitles = [];
 let loadingDccon = false;
-
 let pending = [];
-
 let _loadDcconDetail = async () => {
     if (!pending.length) return loadingDccon = false;
     let array = pending.shift();
     let code = array[0];
     let r = array[1];
-    if (dcconSavedInfoReversed[code] != undefined) return r(), timeout(_loadDcconDetail, 1); // proceed to next
+    if (savedDccons[code] != undefined) return r(), timeout(_loadDcconDetail, 1); // proceed to next
     let json = await postDcconPackageDetail(code).catch(debug);
     if (!json) return r();
-    _processDcconData(json);
-    r(), timeout(_loadDcconDetail, 100);
-}
-
-let _processDcconData = (json) => {
-    let packageName = json['info']['title'];
+    let packageTitle = json['info']['title'];
     let packageIdx = json['info']['package_idx'];
-    let dccons = json['detail'];
-    let packageInfo = {};
-    for (let dccon of dccons) {
-        let dcconName = dccon['title'];
-        let path = dccon['path'];
-        dcconSavedInfoReversed[path] = [ packageName, dcconName ];
-        dcconSavedInfoIdx[path] = [ packageIdx ];
-        packageInfo[dcconName] = path;
-    }
-    dcconSavedInfo[packageName] = packageInfo;
-    let listImgCode = json['info']['list_img_path'];
-    dcconSavedInfoImgCode[packageName] = listImgCode;
-
-    if (!dcconPreload()[packageIdx]) {
-        let detail = [];
-        for (let dccon of dccons) {
-            detail.push({
-                title: dccon['title'],
-                path: dccon['path'],
-            });
+    let details = [];
+    for (let detail of json['detail']) {
+        details.push({
+            title: detail['title'],
+            // idx: detail['idx'],
+            buy: false,
+            package_idx: packageIdx,
+            package_title: packageTitle,
+            code: detail['path']
+        });
         }
-        dcconPreload()[packageIdx] = {
-            info: {
-                title: packageName,
-                package_idx: packageIdx,
-                list_img_path: listImgCode,
-            },
-            detail: detail,
-        };
-        applyOption('dccon', dcconPreload());
+    let package = {
+        title: packageTitle,
+        idx: packageIdx,
+        buy: false,
+        code: json['info']['list_img_path'],
+        detail: details
+    };
+    savePackage(package);
+    r(), timeout(_loadDcconDetail, 1);
     }
-};
-
 let loadDcconDetail = (code) => {
     let { r, p } = initPromise();
     pending.push([code, r]);
@@ -951,19 +932,41 @@ let loadDcconDetail = (code) => {
     return p;
 }
 
-let getDcconUrl = (packageName, dcconName) => {
-    if (dcconSavedInfo[packageName] == undefined) return null;
-    let package = dcconSavedInfo[packageName];
-    if (package[dcconName] == undefined) return null;
-    return getDcconUrlFromCode(package[dcconName]);
+let savePackage = (package) => {
+    let savedPackages = getOption('dccon-pk') ?? {};
+    if (savedPackages[package.idx] != undefined) {
+        let existing = savedPackages[package.idx];
+        if (existing.buy || !package.buy) return;
+        existing.detail = package.detail;
+        existing.buy = true;
+    } else {
+        savedPackages[package.idx] = package;
+    }
+    applyOption('dccon-pk', savedPackages);
+};
+let getPackage = (packageTitle) => {
+    let savedPackages = getOption('dccon-pk');
+    if (!savedPackages) return null;
+    for (let idx in savedPackages) {
+        if (savedPackages[idx].title == packageTitle) return savedPackages[idx];
+    }
+    return null;
 }
-let getDcconListImgUrl = (packageName) => {
-    if (dcconSavedInfoImgCode[packageName] == undefined) return null;
-    return getDcconUrlFromCode(dcconSavedInfoImgCode[packageName]);
+let getDccon = (packageTitle, dcconTitle) => {
+    let package = getPackage(packageTitle);
+    if (!package || !package.detail) return null;
+    for (let detail of package.detail) {
+        if (detail.title == dcconTitle) return detail;
+    }
+    return null;
+}
+
+let getDcconUrl = (packageTitle, dcconTitle) => {
+    let dccon = getDccon(packageTitle, dcconTitle);
+    if (!dccon) return null;
+    return getDcconUrlFromCode(dccon.code);
 }
 let getDcconUrlFromCode = (code) => https + 'dcimg5.dcinside.com/dccon.php?no=' + code;
-let getDcconDetailSync = (code) => dcconSavedInfoReversed[code];
-let getDcconIdxSync = (code) => dcconSavedInfoIdx[code];
 
 let _loadDcconList = async (target, page) => {
     let jsonString = await postWrite( host + 'dccon/lists', {
@@ -982,59 +985,74 @@ let _loadDcconList = async (target, page) => {
         return {};
     }
     let list = json['list'];
-    let maxPage = json['max_page'];
+    let maxPage = 1;
     if (target == 'recent') { // target: recent
-        let { r, p } = initPromise();
-        let result = [];
-        timeout(async() => {
+        let detail = [];
             for (let item of list) {
                 let match = item['list_img'].match(regexDcconId);
                 if (!match) continue;
-                await loadDcconDetail(match[1]).catch(debug);
-                result.push(match[1]);
-            }
-            r();
-        }, 1);
-        onPackageDetail(str_recently, result, p);
+            detail.push({
+                package_title: str_recently,
+                package_idx: item['package_idx'],
+                idx: item['idx'],
+                code: match[1],
+                title: item['title'],
+            });
+        }
+        let package = {
+            title: str_recently,
+            idx: -1,
+            detail: detail,
+        };
+        createPackagePage(package);
     } else if (target == 'icon') { // target: icon
+        maxPage = json['max_page'];
         for (let item of list) {
-            let { r, p } = initPromise();
-            let dcconList = [];
-            let packageName = item['title'];
-            let packageDetail = item['detail'];
-            timeout(async()=>{
-                for (let dccon of packageDetail) {
-                    let detailIdx = dccon['detail_idx'];
+            let packageTitle = item['title'];
+            let packageIdx = item['package_idx'];
+            let code = item['main_img_url'].match(regexDcconId);
+            if (!code) continue;
+            let detail = [];
+            for (let dccon of item['detail']) {
                     let match = dccon['list_img'].match(regexDcconId);
                     if (!match) continue;
-                    let code = match[1];
-                    await loadDcconDetail(code).catch(debug);
-                    let array = getDcconIdxSync(code);
-                    if (array && array.length == 1) array.push(detailIdx);
-                    dcconList.push(match[1]);
-                }
-                r();
-            }, 1);
-            onPackageDetail(packageName, dcconList, p);
-            await p;
+                detail.push({
+                    package_title: packageTitle,
+                    package_idx: packageIdx,
+                    idx: dccon['detail_idx'],
+                    buy: true,
+                    code: match[1],
+                    title: dccon['title'],
+                });
+            }
+            let package = {
+                title: packageTitle,
+                idx: packageIdx,
+                buy: true,
+                code: code[1],
+                detail: detail,
+            };
+            createPackagePage(package);
+            savePackage(package);
         }
-        return maxPage;
     }
+    return maxPage;
 }
 let loadDcconList = async (target) => {
     if (target == 'recent') {
         await _loadDcconList(target, 0);
-    } else if (target == 'icon') {
+    }
+    if (target == 'icon') {
         let maxPage = Math.min(await _loadDcconList(target, 0), 20);
         for (let page = 1; maxPage >= page; page++) {
             await _loadDcconList(target, page);
         }
     }
 }
-let insertDccon = async (code) => {
-    let array = getDcconIdxSync(code);
-    let packageIdx = array[0];
-    let detailIdx = array[1];
+let insertDccon = async (dccon) => {
+    if (!dccon.buy) return openAlert(str_notBought);
+    let packageIdx = dccon.package_idx;
+    let detailIdx = dccon.idx;
     let data = {
         id: gallId,
         no: undefined,
@@ -1062,10 +1080,10 @@ let insertDccon = async (code) => {
     }
     populatePackage('recent').catch(debug);
 }
-let insertDcconComment = async (code, num) => {
-    let array = getDcconIdxSync(code);
-    let packageIdx = array[0];
-    let detailIdx = array[1];
+let insertDcconComment = async (dccon, num) => {
+    if (!dccon.buy) return openAlert(str_notBought);
+    let packageIdx = dccon.package_idx;
+    let detailIdx = dccon.idx;
     let nickname = getNicknameV2();
     if (!nickname.length) return openAlert(str_nullNickname);
     let commentFormData = commentFormDatas[num];
@@ -1348,6 +1366,34 @@ createElement('link', head, {
     rel: 'stylesheet',
     href: https + 'fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'
 });
+
+// favicon
+let setFaviconColor = (() => {
+    let favicon = createElement('link', head, {
+        rel: 'icon',
+        href: ''
+    });
+    let size = 128;
+    let canvas = createElement('canvas', null, { width: size, height: size });
+    let ctx = canvas.getContext('2d', { alpha: true });
+    let icon = createElement('img', null);
+
+    ctx.fill(new Path2D('M19.5.9c-7 1.8-13.4 7-17.1 14.1C.6 18.3.5 21.5.5 64c0 43 .1 45.7 1.9 49.4 2.5 5 7.2 9.7 12.2 12.2 3.7 1.8 6.4 1.9 49.4 1.9s45.7-.1 49.4-1.9c5-2.5 9.7-7.2 12.2-12.2 1.8-3.7 1.9-6.4 1.9-49.4 0-42.5-.1-45.7-1.9-49-2.6-4.9-7.4-9.8-12.1-12.3C109.6.5 108.5.5 66 .3 42.1.2 21.2.5 19.5.9zm44.6 32.2L68 35v18.1l4.6-3.3C80 44.5 84.2 45 102 53.4c8 3.7 14.8 7.1 15.2 7.5.6.5-10.3 10.1-11.5 10.1-.3 0-.7-.9-1-1.9-.5-2.2-13.4-9.1-16.9-9.1-2.5 0-4.6 1.2-13.7 8l-6 4.5-.1 7.1c0 7.1 0 7.2 3.2 8.5 1.7.7 4.7 1.3 6.5 1.3 1.8 0 3.3.1 3.3.2 0 .2-2.7 2.4-6.1 5l-6.1 4.6-8.5-3.7c-6.2-2.8-8.7-4.5-9.4-6.3-.8-2-1.2-2.2-2.4-1.2-1.1.9-3.4.2-11.2-3.5-11.3-5.3-12.9-6.6-15.4-12-1.5-3.3-1.9-6.6-1.9-18.1 0-12.8.2-14.4 2.1-16.8 1.1-1.4 3-2.6 4.2-2.6 3.5 0 19 7.7 21.6 10.7l2.4 2.7-.5-11-.4-11.1 5.4 2.4c3 1.3 7.2 3.3 9.3 4.4z'));
+    ctx.fill(new Path2D('M38.6 49.7c-.3.3-.6 6.2-.6 12.9 0 12.2 0 12.4 2.6 14 2.2 1.5 2.7 1.5 3.5.3.5-.8.9-1.9.9-2.4 0-.6 1.1-2.7 2.5-4.8 2.2-3.1 2.5-4.7 2.3-9.5l-.3-5.7-5.1-2.7c-2.8-1.5-5.4-2.5-5.8-2.1z'));
+    icon.src = canvas.toDataURL();
+
+    return (hex) => {
+        ctx[globalCompositeOperation] = 'copy';
+        ctx.fillStyle = hex;
+        ctx.fillRect(0, 0, size, size);
+        ctx[globalCompositeOperation] = 'destination-in';
+        ctx.drawImage(icon, 0, 0);
+        ctx[globalCompositeOperation] = 'destination-over';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(12, 12, size - 24, size - 24);
+        favicon.href = canvas.toDataURL();
+    };
+})();
 
 if (bMobileDevice) initCaptchaV3();
 
@@ -1635,6 +1681,7 @@ let addVideo = (url) => {
     if (url == 'show log') return removeClass(logDiv, hidden);
     if (url == 'clear options') return clearSaveData();
     if (url == 'show options') return debug(_saveData);
+    if (url == 'refresh update') return initUpdate();
     let before = loadedVideoUrls.length;
     if (!/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/.test(url))
         return openAlert(str_noValidUrl);
@@ -1835,7 +1882,21 @@ let checkMaxOpened = () => {
 let chatContainer = createElement(divString, main, 'chat');
 let header = createElement(divString, chatContainer, 'hd');
 createElement(spanString, header, { [innerText]: str_chatHeader }, 'h');
-let help = createElement('a', header, { href: helpUrl, target: '_blank' }, 'help.b');
+let bRefreshing = false;
+let refresh = createElement('a', header, {
+    [onclick]: () => {
+        if (bRefreshing) return;
+        bRefreshing = true;
+        initUpdate();
+        addClass(refreshIcon, 'rotate-ccw-half');
+        timeout(() => {
+            bRefreshing = false;
+            removeClass(refreshIcon, 'rotate-ccw-half');
+        }, 800);
+    }
+}, 'help.b.abs-tl');
+let refreshIcon = createIcon(refresh, 'sync');
+let help = createElement('a', header, { href: helpUrl, target: '_blank' }, 'help.b.abs-tr');
 createIcon(help, 'help');
 let chatViewport = createElement(divString, chatContainer, 'vp');
 let chatPage = createElement(divString, chatViewport, 'page');
@@ -2021,7 +2082,7 @@ let showLine = (div) => {
     removeClass(div, hidden);
     pullDown(true);
 }
-let newLine = async (postData, bNow = false) => {
+let newLine = async (postData) => {
     let num = postData.num;
     let line = createElement(divString, chatPage, 'chl', hidden);
     // 이미 채팅창에서 제거된 요소인지 여부를 저장
@@ -2052,7 +2113,7 @@ let newLine = async (postData, bNow = false) => {
         let dcconName = match[2];
         let url = getDcconUrl(packageName, dcconName);
         if (url) {
-            replaceDccon(titleSpan, newRegex(dcconString), url);
+            replaceDccon(titleSpan, dcconString, url);
             pullDown(true);
             continue;
         }
@@ -2287,7 +2348,7 @@ let newLine = async (postData, bNow = false) => {
             let string = num + '';
             return string.split('').reverse();
         }
-        onPostCommentCountChanged[num] = (newCount = -1, bNow = false) => {
+        onPostCommentCountChanged[num] = (newCount = -1, bForced = false) => {
             if (removed.value != 'false') {
                 delete onPostCommentCountChanged[num];
                 return;
@@ -2312,15 +2373,15 @@ let newLine = async (postData, bNow = false) => {
                 if (!bHiddenPostContent || listeningPost[num]) updateComment().catch(debug);
             }
             // 댓글 수 변하는 타이밍을 임의로 설정
-            if (bNow) func();
+            if (bForced) func();
             else timeout(func, randomInt(1, interval));
         };
     }
 
-    if (!bNow && postData.date) {
+    if (postData.date) {
         // 글 올라오는 타이밍을 시뮬레이션
         let simulatedDelay = getNow() - postData.date;
-        if (simulatedDelay > interval) showLine(line);
+        if (simulatedDelay > interval || bGreeted) showLine(line);
         timeout(() => showLine(line), interval - simulatedDelay);
     } else {
         showLine(line);
@@ -2553,11 +2614,10 @@ let dcconPage =
         'vp'),
     'page');
 
-// 패키지 정보가 주어지면 
-onPackageDetail = async (packageName, list, promise) => {
-    let hash = await computeHashAsColor(packageName).catch(debug);
-    let id = 'dc' + hash.substring(1);
-    let linkImage = null;
+let createPackagePage = (package) => {
+    let packageIdx = package.idx;
+    let packageTitle = package.title;
+    let id = 'dc' + packageIdx;
 
     // make a package page
     let entry = createElement(divString, null, 'package');
@@ -2571,40 +2631,39 @@ onPackageDetail = async (packageName, list, promise) => {
             input.focus();
             scrollToTop();
         } });
-        if (packageName == str_recently) {
-            createIcon(link, 'history');
-        } else {
-            linkImage = createElement('img', link, 'dm');
-        }
+        if (packageTitle == str_recently) createIcon(link, 'history');
+        else createElement('img', link, { src: getDcconUrlFromCode(package.code) });
     }
     entry.setAttribute('id', id);
-    createElement(spanString, createElement(divString, entry, 'hd.r'), {
-        [innerText]: packageName
-    });
+    createElement(spanString, createElement(divString, entry, 'hd.r'), { [innerText]: packageTitle });
     let flex = createElement(divString, entry, 'flex.fr');
-    let dummy = createElement(divString, entry, 'dm');
-    createElement(spanString, dummy, { [innerText]: str_loading });
-    await promise.catch(debug);
-    addClass(dummy, hidden);
-    for (let item of list) {
-        let array = getDcconDetailSync(item);
+    for (let dccon of package.detail) {
+        let code = dccon.code;
+        let title = dccon.title;
+        let pTitle = dccon.package_title;
         createElement('img', flex, {
             loading: "lazy",
-            src: getDcconUrlFromCode(item),
-            [onclick]: () => {
+            src: getDcconUrlFromCode(code),
+            [onclick]: async () => {
+                let _dccon = getDccon(pTitle, title);
+                debug(pTitle, title, _dccon);
                 if (isPostingWrite()) {
-                    insertDccon(item);
+                    insertDccon(_dccon);
+                    let _packageTitle = packageTitle;
+                    if (packageTitle == str_recently) {
+                        if (savedDccons[code] != undefined) _packageTitle = savedDccons[code].package_title;
+                        else {
+                            await loadDcconDetail(code);
+                            _packageTitle = savedDccons[code].package_title;
+                        }
+                    }
                     input.focus();
-                    input.value += ':' + array[0] + ', ' + array[1] + ': ';
+                    input.value += ':' + _packageTitle + ', ' + title + ': ';
                 } else {
-                    insertDcconComment(item, targetPostNum);
+                    insertDcconComment(_dccon, targetPostNum);
                 }
             }
         }, 'd');
-    }
-    if (linkImage) {
-        linkImage.src = getDcconListImgUrl(packageName);
-        removeClass(linkImage, 'dm');
     }
 }
 
@@ -2612,11 +2671,14 @@ let populatePackage = async (target) => {
     await loadDcconList(target).catch(debug);
 }
 
-onApplyFunc['dccon'] = (infos) => {
-    for (let packageName in infos) {
-        _processDcconData(infos[packageName]);
+onApplyFunc['dccon-pk'] = (packages) => {
+    for (let title in packages) {
+        if (savedPackageTitles.includes(title)) continue;
+        let package = packages[title];
+        for (let detail of package.detail) savedDccons[detail.code] = detail;
+        savedPackageTitles.push(package.title);
     }
-}
+};
 
 let panelHidden = true;
 let bPopulated = false;
@@ -3336,20 +3398,28 @@ let getPostComment = async (num) => {
 
 let myPosts = [];
 
-let onPostData = async (postDatas) => {
+let onPostData = async (postDatas, bForced = false) => {
     if (postDatas.length == 0) return;
+    if (!bGreeted) bForced = true;
+    if (bFirstUpdate) newLine({ title: str_reconnected });
     postDatas = postDatas.sort((a, b) => a.num - b.num);
     let lastNumCur = 0;
     for (let postData of postDatas) {
         if (!myPosts.includes(postData.num)) {
-            await newLine(postData, firstUpdate).catch(debug);
-            if (postData.count) onPostCommentCountChanged[postData.num]?.(postData.count, firstUpdate);
+            await newLine(postData).catch(debug);
+            if (postData.count) onPostCommentCountChanged[postData.num]?.(postData.count, bForced);
         }
         lastNumCur = Math.max(lastNumCur, postData.num);
     }
     lastNum = Math.max(lastNum, lastNumCur);
     if (worker) worker.postMessage({ type: 'ln', n: lastNum });
-    firstUpdate = false;
+
+    if (!bGreeted) { // greeting
+        newLine({title: str_greeting});
+        bGreeted = true;
+        if (bWriteUnavailable) newLine({ title: str_notifyChatDisabled });
+    }
+    bFirstUpdate = false;
 };
 
 let genUpdateList = () => {
@@ -3382,7 +3452,7 @@ let genUpdateList = () => {
         _url = getListUrl();
         _getAsText = getAsText;
         _postCommentCount = postCommentCount;
-        _onChange = (n, c) => onPostCommentCountChanged[n]?.(c, firstUpdate);
+        _onChange = (n, c) => onPostCommentCountChanged[n]?.(c, bFirstUpdate);
         _onPostData = onPostData;
         _getInnerText = getInnerText;
         _getInnerHtml = getInnerHtml;
@@ -3406,7 +3476,7 @@ let genUpdateList = () => {
             .replace(/&quot;/g, '"');
     }
     updateList = async () => {
-        let text = await _getAsText(_url).catch(_debug);
+        let text = await _getAsText(_url);
         if (!text) return;
         text = text.replace(/(\n|\r|\t)/g, ''); // use replace instead of r due to worker compatibility
         let postDatas = [];
@@ -3453,8 +3523,7 @@ let genUpdateList = () => {
                 _getAttributeTo(writer, 'data-nick', postData, 'nickname');
                 _getAttributeTo(writer, 'data-uid', postData, 'id');
                 _getAttributeTo(writer, 'data-ip', postData, 'ip');
-                let nikcon = writer.match(/<img[^>]*src=["|']([^"']+)["|']/);
-                _debug(writer, nikcon);
+                let nikcon = writer.match(/<img[^>]*src=["']([^"']+)["']/);
                 if (nikcon) {
                     let img = nikcon[1];
                     postData.img = img;
@@ -3474,64 +3543,64 @@ let { _UL: updateList } = genUpdateList();
 
 let genUpdateFunc = () => {
     let updateCycle = async () => {
-        let _updateList, _iv;
+        let _updateList, _iv, _loop;
         try {
             _updateList = _UL;
             _iv = _IV;
+            _loop = () => { };
         } catch {
             _iv = interval;
             _updateList = updateList;
+            _loop = (id) => loop = id;
         }
-        await _updateList().catch(()=>{});
-        setTimeout(updateCycle, _iv);
+        await _updateList().catch(() => { postMessage({type: 'err'}); });
+        _loop(setTimeout(updateCycle, _iv));
     };
 
     return { _UC: updateCycle };
 }
 let { _UC: updateCycle } = genUpdateFunc();
 
-// 업데이트 시작
-if (!window.Worker) updateCycle().then(() => {
-    newLine({title: str_greeting});
-    bGreeted = true;
-    if (bWriteUnavailable) newLine({ title: str_notifyChatDisabled });
-    _pullDown();
-});
-else { // use worker at background
-    let blob = new Blob([
-        // `let IS_WORKER=true;`,
-        `let _URL='${getListUrl()}';`,
-        `let _IV=${interval};`,
-        `let _LN=${lastNum};`,
-        `let _SS='${str_survey}';`,
-        `let _SN='${str_notice}';`,
-        `let{_IH,_OH,_IT,_AT,_A,_TF,_DEBUG}=(${genUtil.toString()})();`,
-        `let{_TEXT}=(${genFetch.toString()})();`,
-        `let{_UL}=(${genUpdateList.toString()})();`,
-        `let{_UC}=(${genUpdateFunc.toString()})();`,
-        `self.onmessage=async(e)=>{switch(e.data.type){case'iv':_IV=e.data.iv;break;case'ln':_LN=e.data.n;break;}};`,
-        `_UC();`,
-    ], { type: 'text/javascript' });
-    let url = URL.createObjectURL(blob);
-    worker = new Worker(url);
-    worker.onerror = debug;
-    worker.onmessage = async (e) => {
-        let data = e.data;
-        if (data && data.type) {
-            if (data.type == 'pd') {
-                await onPostData(data.d);
-                if (!bGreeted) {
-                    newLine({title: str_greeting});
-                    bGreeted = true;
-                    if (bWriteUnavailable) newLine({ title: str_notifyChatDisabled });
-                    _pullDown();
-                }
-                return;
+let initUpdate = () => {
+    debug('init update');
+    bFirstUpdate = true;
+    if (bWorkerAvailable) {
+        if (worker) worker.terminate();
+        let blob = new Blob([
+            `let _URL='${getListUrl()}';`,
+            `let _IV=${interval};`,
+            `let _LN=${lastNum};`,
+            `let _SS='${str_survey}';`,
+            `let _SN='${str_notice}';`,
+            `let{_IH,_OH,_IT,_AT,_A,_TF,_DEBUG}=(${genUtil.toString()})();`,
+            `let{_TEXT}=(${genFetch.toString()})();`,
+            `let{_UL}=(${genUpdateList.toString()})();`,
+            `let{_UC}=(${genUpdateFunc.toString()})();`,
+            `self.onmessage=async(e)=>{switch(e.data.type){case'iv':_IV=e.data.iv;break;case'ln':_LN=e.data.n;break;}};`,
+            `_UC();`,
+        ], { type: 'text/javascript' });
+        let url = URL.createObjectURL(blob);
+        worker = new Worker(url);
+        worker.onerror = (...any) => {
+            debug(...any);
+            initUpdate();
+        };
+        worker.onmessage = async (e) => {
+            let data = e.data;
+            if (data && data.type) {
+                if (data.type == 'pd') return await onPostData(data.d);
+                if (data.type == 'cc') return onPostCommentCountChanged[data.n]?.(data.c, bFirstUpdate);
+                if (data.type == 'err') return initUpdate();
             }
-            if (data.type == 'cc') return onPostCommentCountChanged[data.n]?.(data.c, firstUpdate);
-        }
-    };
+        };
+    } else {
+        if (loop) clearTimeout(loop);
+        updateCycle();
+    }
 }
+
+// 업데이트 시작
+initUpdate();
 
 // 글 쓰기
 let formData = {
@@ -3615,7 +3684,7 @@ refreshWriteSession = async() => {
     pullDown(true);
 }
 let falseString = (s) => 'false||' + s;
-let makeDcconContent = (url, dcconName) => `<img class="written_dccon" src="${url}" conalt="${dcconName}" alt="${dcconName}" con_alt="${dcconName}" title="${dcconName}">`;
+let makeDcconContent = (url, title, idx) => `<img class="written_dccon" src="${url}" conalt="${title}" alt="${title}" con_alt="${title}" title="${title}" detail="${idx}">`;
 let lastWrite = 0;
 let getEmbed = async (url, bAddLink = true) => {
     let fallback = `<p><a href="${url}" target="_blank">${url}</a></p>`;
@@ -3709,24 +3778,30 @@ let writePost = async (title, content) => {
     // apply dccon
     let dcconContent = '';
     for (let match of title.matchAll(regexDccon)) {
-        let packageName = match[1];
-        let dcconName = match[2];
-        let url = getDcconUrl(packageName, dcconName);
-        if (url) {
-            dcconContent += makeDcconContent(url, dcconName);
-        }
+        let packageTitle = match[1];
+        let dcconTitle = match[2];
+        let url = getDcconUrl(packageTitle, dcconTitle);
+        if (!url) continue;
+        let dccon = getDccon(packageTitle, dcconTitle);
+        if (!dccon) continue;
+        if (!dccon.buy) continue;
+        dcconContent += makeDcconContent(url, dcconTitle, dccon.idx);
     }
     if (dcconContent) dcconContent += str_lineBreak;
 
     for (let match of content.matchAll(regexDccon)) {
         let dcconString = match[0];
         let packageName = match[1];
-        let dcconName = match[2];
-        let url = getDcconUrl(packageName, dcconName);
-        if (url) content = content.r(dcconString, makeDcconContent(url, dcconName));
+        let dcconTitle = match[2];
+        let url = getDcconUrl(packageName, dcconTitle);
+        if (!url) continue;
+        let dccon = getDccon(packageName, dcconTitle);
+        if (!dccon) continue;
+        if (!dccon.buy) continue;
+        content = content.r(dcconString, makeDcconContent(url, dcconTitle, dccon.idx));
     }
 
-    lastData.memo = encode(imageContent + linkContent + str_lineBreak + dcconContent + content).r(/%20/g, '+');
+    lastData.memo = imageContent + linkContent + str_lineBreak + dcconContent + content;
     let res = await postWrite(articleSubmit, formData, additionalFormData, lastData).catch(debug);
     if (res) {
         let splits = res.split('||');

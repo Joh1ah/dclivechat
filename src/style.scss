@@ -1000,7 +1000,6 @@ $inputHeight: 100px;
         font-weight: bold;
     }
     .help {
-        right: 0;
         position: absolute;
         >span {
             color: $colorBackgroundLight;
@@ -1528,5 +1527,18 @@ $previewImageSize: 140px;
     }
     100% {
         opacity: 1;
+    }
+}
+
+.rotate-ccw-half {
+    animation: rotate-ccw-half .8s;
+}
+
+@keyframes rotate-ccw-half {
+    0% {
+        rotate: 180deg;
+    }
+    100% {
+        rotate: 0deg;
     }
 }
