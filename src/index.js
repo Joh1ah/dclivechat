@@ -975,7 +975,7 @@ let _loadDcconDetail = async () => {
     let array = pending.shift();
     let code = array[0];
     let r = array[1];
-    if (savedDccons[code] != undefined) return r(), timeout(_loadDcconDetail, 1); // proceed to next
+    if (savedDccons[code] != undefined) return r(savedDccons[code]), timeout(_loadDcconDetail, 1); // proceed to next
     let json = await postDcconPackageDetail(code).catch(debug);
     if (!json) return r();
     let packageTitle = json['info']['title'];
@@ -999,8 +999,8 @@ let _loadDcconDetail = async () => {
         detail: details
     };
     savePackage(package);
-    r(), timeout(_loadDcconDetail, 1);
-    }
+    r(savedDccons[code]), timeout(_loadDcconDetail, 1);
+}
 let loadDcconDetail = (code) => {
     let { r, p } = initPromise();
     pending.push([code, r]);
@@ -2736,7 +2736,7 @@ let createPackagePage = (package) => {
             loading: "lazy",
             src: getDcconUrlFromCode(code),
             [onclick]: async () => {
-                let _dccon = getDccon(pTitle, title);
+                let _dccon = await loadDcconDetail(code); // since package title could be 'latest'
                 debug(pTitle, title, _dccon);
                 if (isPostingWrite()) {
                     insertDccon(_dccon);

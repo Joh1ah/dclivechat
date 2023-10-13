@@ -262,8 +262,6 @@ a, span {
 
 .w {
     width: 100%;
-    background: $colorBackgroundLight;
-    border-radius: 0 0 4px 4px;
     transition: height .5s;
     overflow: hidden;
     margin-bottom: auto;
@@ -521,6 +519,7 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
 .chl {
     align-items: baseline;
     align-self: center;
+    border-radius: 4px;
     
     >.tt {
         cursor: pointer;
@@ -553,14 +552,10 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
 
     &.open {
         margin: .8em 1.5em;
-    }
-
-    &.open>.tt, >.tt:hover {
         background: $colorBackgroundLight;
     }
-
-    &.open>.tt {
-        border-radius: 4px 4px 0 0;
+    &:hover {
+        background: $colorBackgroundLight;
     }
 
     .ex.alt {
