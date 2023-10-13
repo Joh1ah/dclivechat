@@ -1,7 +1,7 @@
 $colorShadow: var(--cs);
-$colorBackgroundDarker: var(--cbdr);
+$colorBackgroundDarker: rgb(var(--cbdr));
 $colorBackgroundDark: rgb(var(--cbd));
-$colorBackground: var(--cb);
+$colorBackground: rgb(var(--cb));
 $colorBackgroundLight: rgb(var(--cbl));
 $colorBackgroundDark80: rgba(var(--cbd), .8);
 $colorBackgroundLight80: rgba(var(--cbl), .8);
@@ -56,13 +56,13 @@ html {
 body {
     // color
     --cs: black;
-    --cbdr: black;
-    --cbd: 13, 13, 14;
-    --cb: #1b1b1d;
+    --cbdr: 0, 0, 0; // #000000
+    --cbd: 13, 13, 14; // #0d0d0e
+    --cb: 27, 27, 29; // #1b1b1d
     --cbl: 51, 51, 51;
     --cfd: 165, 165, 165;
     --cf: 255, 255, 255;
-    --cbo: #0d0d0e;
+    --cbo: #0d0d0e; // #0d0d0e
 
     --f: ;
 
@@ -75,9 +75,9 @@ body {
 }
 .light {
     --cs: #383838;
-    --cbdr: rgb(255, 255, 255);
+    --cbdr: 255, 255, 255; // #ffffff
     --cbd: 232, 232, 232;
-    --cb: rgb(255, 255, 255);
+    --cb: 255, 255, 255; // #ffffff
     --cbl: 220, 220, 220;
     --cfd: 0, 0, 0;
     --cf: 13, 13, 14;

@@ -501,7 +501,8 @@ let cutIpAddress = (address) => {
     let array = address.split('.');
     return array[0] + '.' + array[1];
 };
-let setStyleVariable = (propertyName, value) => doc.documentElement.style.setProperty(propertyName, value);
+let setStyleProp = (element, propertyName, value) => element.style.setProperty(propertyName, value);
+let setDocStyleProp = (propertyName, value) => setStyleProp(doc.documentElement, propertyName, value);
 
 // grecaptcha v3
 let initCaptchaV3 = async () => {
@@ -615,6 +616,7 @@ let getBoardUrlPlain = () => host + 'board/';
 let getListUrl = () => getBoardUrl() + 'lists?id=' + gallId;
 let getWriteUrl = () => getBoardUrl() + 'write/?id=' + gallId;
 let getPostUrl = (num) => getBoardUrl() + 'view/?id=' + gallId + '&no=' + num;
+let getDeleteUrl = (num) => getBoardUrl() + 'delete/?id=' + gallId + '&no=' + num;
 
 // Fetch
 let serializeForm = (...datas) => {
@@ -679,39 +681,89 @@ let getSecondServiceCode = (code, secret) => {
 
 // worker support
 let genUtil = () => {
+    let _debug;
+    try {
+        _debug = debug;
+    } catch {
+        _debug = console.log;
+    }
+
     let savedRegexHtml = {};
-    let _getHtml = (text, tagName, className) => {
+    let getHtml = (text, tagName, className) => {
+        let matches = getHtmlAll(text, tagName, className);
+        if (!matches) return '';
+        return matches[0];
+    }
+    let getHtmlAll = (text, tagName, className) => {
         let regex;
         let key = tagName + className;
         if (savedRegexHtml[key] !== undefined) regex = savedRegexHtml[key];
         else {
-            let regexString = `<${tagName}[^>]*class="[^"]*${className}[^"]*"[^>]*>(.+?)<\/${tagName}>`;
-            regex = new RegExp(regexString);
+            let regexString = `<${tagName}[^>]*class=["'][^"]*${className}[^"]*["'][^>]*(\/?)>`;
+            regex = new RegExp(regexString, 'g');
             savedRegexHtml[key] = regex;
         }
-        let match = text.match(regex);
-        if (!match) return null;
-        return match;
-    }
+        let matches = text.matchAll(regex);
+        if (!matches) return null;
+        let result = [];
+        for (match of matches) {
+            if (DEBUG) _debug(match);
+            if (match[1]) {
+                result.push([match[0], '']);
+                continue;
+            }
+            let index = match.index;
+            let size = 0;
+            let sub = text.substring(index);
+            let level = 0;
+            let ends = sub.matchAll(new RegExp(`<(\/?)${tagName}[^>]*(\/?)>`, 'g'));
+            for (let end of ends) {
+                if (end[1]) { // close
+                    level -= 1;
+                    if (level == 0) {
+                        index = end.index;
+                        size = end[0].length;
+                        break;
+                    }
+                } else {
+                    if (!end[2]) level += 1;
+                }
+            }
+            result.push([sub.substring(0, index + size), sub.substring(match[0].length, index)]);
+        }
+        return result;
+    };
     let getInnerHtml = (text, tagName, className) => {
-        let match = _getHtml(text, tagName, className);
+        let match = getHtml(text, tagName, className);
         if (!match) return '';
         else return match[1];
-    }
+    };
     let getOuterHtml = (text, tagName, className) => {
-        let match = _getHtml(text, tagName, className);
+        let match = getHtml(text, tagName, className);
         if (!match) return '';
         else return match[0];
-    }
+    };
+    let getOuterHtmlAll = (text, tagName, className) => {
+        let outers = [];
+        let matches = getHtmlAll(text, tagName, className);
+        if (!matches) return '';
+        for (let match of matches) {
+            outers.push(match[0]);
+        }
+        return outers;
+    };
     let getInnerText = (text, tagName, className) => {
-        let innerText = '';
         let innerHtml = getInnerHtml(text, tagName, className);
         if (!innerHtml) return '';
-        for (let match of innerHtml.matchAll(/(>|$)(.*?)(<|^)/g)) {
-            innerText += match[2].trim();
+        return innerTextOf(innerHtml);
+    };
+    let innerTextOf = (text) => {
+        let result = '';
+        for (let match of text.matchAll(/(>|$)(.*?)(<|^)/g)) {
+            result += match[2].trim();
         }
-        return innerText;
-    }
+        return result;
+    };
     let savedRegexAttr = {};
     let getAttributeTo = (text, attrName, output, propName) => {
         let attr = getAttribute(text, attrName);
@@ -733,33 +785,41 @@ let genUtil = () => {
     // 기타 매크로
     let testFix = (string) => /fix/.test(string);
 
-    let _debug;
-    try {
-        _debug = debug;
-    } catch {
-        _debug = console.error;
-    }
-
     return {
         _IH: getInnerHtml,
         _OH: getOuterHtml,
+        _OHA: getOuterHtmlAll,
         _IT: getInnerText,
         _AT: getAttributeTo,
         _A: getAttribute,
         _TF: testFix,
         _DEBUG: _debug,
+        _IO: innerTextOf,
     };
 };
 let {
     _IH: getInnerHtml,
     _OH: getOuterHtml,
+    _OHA: getOuterHtmlAll,
     _IT: getInnerText,
     _AT: getAttributeTo,
     _A: getAttribute,
     _TF: testFix,
     _DEBUG: _debug,
-} = genUtil();
-
+    _IO: innerTextOf,
+} = genUtil(debug);
+let savedRegexId = {};
+let getValueById = (text, id) => {
+    let regex;
+    if (savedRegexId[id]) regex = savedRegexId[id];
+    else {
+        regex = new RegExp(`<[^>]+(id|name)=["']${id}["'][^>]+value=["']([^"']+)["']`);
+        savedRegexId[id] = regex;
+    }
+    let match = text.match(regex);
+    if (!match) return '';
+    return match[2];
+}
 
 //#endregion
 
@@ -777,7 +837,7 @@ let genFetch = () => {
         if (!options.credentials) options.credentials = 'include';
         let res = await fetch(url, options).catch(_debug);
         if (!res || !res.ok) return '';
-        return res.text().catch(_debug);
+        return (await res.text().catch(_debug)).replace(/(\n|\r|\t)/g, '');
     };
     return { _TEXT: getAsText };
 }
@@ -882,6 +942,25 @@ let postDeleteImage = (imgNum) => {
     let url = getBoardUrlPlain() + 'temp/upimg_pop_del';
     postAsText(url, options, body).catch(debug).then(res => (res != 'true') && openAlert(str_deleteFail));
 }
+// let postDelete = async (num) => {
+//     let html = await getAsText(getDeleteUrl(num));
+//     if (!html) return falseString('not available');
+//     let parsed = getAsDocument();
+//     if (!parsed) return falseString('not available');
+//     let data = {
+//         ci_t: '',
+//         id: '',
+//         no: '',
+//         key: '',
+//         dcc_key: '',
+//         service_code: '',
+//         cur_t: '',
+//     }
+//     updateFormData(parsed, data);
+//     let secret = getSecretString(html);
+//     if (!secret) return falseString('no secret');
+//     data.service_code = getSecondServiceCode(data.service_code, secret);
+// }
 
 //#endregion
 
@@ -1218,7 +1297,17 @@ let updateFormData = (html, data) => {
     }
     if (!gallType && formData._GALLTYPE_) gallType = formData._GALLTYPE_;
     if (!gallNum && formData.gallery_no) gallNum = formData.gallery_no;
-    rKey = formData.r_key;
+    if (formData.r_key) rKey = formData.r_key;
+};
+
+let updateFormData_v2 = (text, data) => {
+    for (let id in data) {
+        let value = getValueById(text, id);
+        if (value) data[id] = value;
+    }
+    if (!gallType && formData._GALLTYPE_) gallType = formData._GALLTYPE_;
+    if (!gallNum && formData.gallery_no) gallNum = formData.gallery_no;
+    if (formData.r_key) rKey = formData.r_key;
 };
 
 //#endregion
@@ -1301,27 +1390,30 @@ let clearSaveData = () => saveOptions({});
 // 로드는 초기화 마지막 순서로
 
 (async() => {
-    let html = await getAsDocument(getListUrl()).catch(debug);
-    let loginBox = html[querySelector]('#login_box');
+    let html = await getAsText(getListUrl()).catch(debug);
+    let loginBox = getInnerHtml(html, divString, 'login_box');
+    if (DEBUG) debug('login', loginBox);
     if (loginBox) {
-        let loginButtons = loginBox[getElementsByClassName]('btn_inout');
-        if (loginButtons.length > 0) {
-            let string = loginButtons[0].innerText;
-            if (string == str_logout) bLogin = true;
-            if (DEBUG) debug('login', bLogin);
-        }
-        let nickname = loginBox[querySelector]('strong.nickname');
-        if (nickname) userNickname = nickname.innerText;
-        let nikcon = loginBox[querySelector]('strong.writer_nikcon');
-        if (nikcon) {
-            let match = nikcon.getAttribute('onclick').match(/\/([a-zA-Z0-9_-]+)'/);
-            if (match) userId = match[1];
-            let img = nikcon[getElementsByTagName]('img')[0];
-            userImg = img.src;
-            bUserFix = testFix(img.src);
+        let string = getInnerHtml(loginBox, 'button', 'btn_inout');
+        if (DEBUG) debug('string', string);
+        if (string && string == str_logout) {
+            bLogin = true;
+            let nickname = getInnerText(loginBox, 'strong', 'nickname');
+            if (nickname) userNickname = nickname;
+            let nikcon = getOuterHtml(loginBox, 'strong', 'writer_nikcon');
+            if (nikcon) {
+                let match = getAttribute(nikcon, 'onClick').match(/\/([a-zA-Z0-9_-]+)['"]/);
+                if (match) userId = match[1];
+                match = nikcon.match(/src=["']([^"']+)["']/);
+                if (match) {
+                    userImg = match[1];
+                    bUserFix = testFix(match[1]);
+                }
+                
+            }
         }
     }
-    html.remove();
+    if (DEBUG) debug('login', bLogin);
     onLoginChecked?.();
 })();
 
@@ -1640,8 +1732,8 @@ let renderRow = () => {
     removeClass(relocateVideoButton, disabled);
     removeClass(videoInputCloseButton, hidden);
     addClass(videoInputContainer, hidden);
-    if (videoDivs.length == 1) setStyleVariable('--r2t', '0px');
-    else setStyleVariable('--r2t', '50%');
+    if (videoDivs.length == 1) setDocStyleProp('--r2t', '0px');
+    else setDocStyleProp('--r2t', '50%');
     let half = (videoDivs.length - 1) / 2;
     let r1cnt = 0;
     let r2cnt = 0;
@@ -1658,8 +1750,8 @@ let renderRow = () => {
             addClass(videoDiv, 'c' + r2cnt);
         }
     }
-    setStyleVariable('--rw1', r1cnt);
-    setStyleVariable('--rw2', r2cnt);
+    setDocStyleProp('--rw1', r1cnt);
+    setDocStyleProp('--rw2', r2cnt);
 };
 
 let _addVideo = (url) => {
@@ -1792,15 +1884,15 @@ let addVideoIframe = (url, options = {}) => {
         addClass(videoDiv, 'drg');
         offsetX = () => videoDiv.getClientRects()[0].width / 2;
         offsetY = () => (videoDiv.getClientRects()[0].height / 2) + 50;
-        setStyleVariable('--mx', (x - offsetX()) + 'px');
-        setStyleVariable('--my', (y - offsetY()) + 'px');
+        setDocStyleProp('--mx', (x - offsetX()) + 'px');
+        setDocStyleProp('--my', (y - offsetY()) + 'px');
         draggingDiv = videoDiv;
         draggingUrl = url;
     };
     let onMove = (x, y) => {
         request(() => {
-            setStyleVariable('--mx', (x - offsetX()) + 'px');
-            setStyleVariable('--my', (y - offsetY()) + 'px');
+            setDocStyleProp('--mx', (x - offsetX()) + 'px');
+            setDocStyleProp('--my', (y - offsetY()) + 'px');
         });
     };
     let onEnter = () => {
@@ -2056,7 +2148,6 @@ let checkMaxPost = () => {
 // 채팅창 스크롤 고정 효과
 let _pullDown = () => chatViewport.scrollTop = chatPage.scrollHeight;
 pullDown = (bForced = false) => {
-    if (DEBUG) debug('pulldown', bForced);
     scrollSus = bForced ? 1 : 0;
     if (!bPullDown) return;
     return _pullDown();
@@ -2121,14 +2212,14 @@ let newLine = async (postData) => {
         if (fetchingDcconInfo) continue;
         fetchingDcconInfo = true;
         (async () => {
-            let { write: writeDiv } = await getPostContent(postData.num).catch(debug);
-            if (!writeDiv) return;
-            let imgs = writeDiv[getElementsByClassName]('written_dccon');
+            let { write } = await getPostContent(postData.num).catch(debug);
+            if (!write) return;
+            let imgs = getOuterHtmlAll(write, 'img', 'written_dccon');
             for (let img of imgs) {
-                let match = img.src.match(regexDcconId);
+                let match = getAttribute(img, 'src').match(regexDcconId);
                 if (match) await loadDcconDetail(match[1]).catch(debug);
                 else {
-                    let match = img.getAttribute('data-src').match(regexDcconId);
+                    let match = getAttribute(img, 'data-src').match(regexDcconId);
                     if (match) await loadDcconDetail(match[1]).catch(debug);
                 }
             }
@@ -2381,7 +2472,7 @@ let newLine = async (postData) => {
     if (postData.date) {
         // 글 올라오는 타이밍을 시뮬레이션
         let simulatedDelay = getNow() - postData.date;
-        if (simulatedDelay > interval || bGreeted) showLine(line);
+        if (simulatedDelay > interval || !bGreeted) showLine(line);
         timeout(() => showLine(line), interval - simulatedDelay);
     } else {
         showLine(line);
@@ -2502,11 +2593,11 @@ let inputHeightName = '--ih';
 let input = createElement('textarea', inputContainer, {
     [placeholder]: str_placeholderMessage,
     oninput: () => {
-        setStyleVariable(inputHeightName, (input.clientHeight + 12) + 'px');
+        setDocStyleProp(inputHeightName, (input.clientHeight + 12) + 'px');
         input.style.height = 0;
         input.style.height = (input.scrollHeight - 19) + 'px';
         pullDown(true);
-        request(() => setStyleVariable(inputHeightName, 0))
+        request(() => setDocStyleProp(inputHeightName, 0))
     },
     onblur: scrollToTop
 }, disabled);
@@ -3074,7 +3165,7 @@ let createOption = (labelText, onChecked, onUnchecked, initialToggle = false, pa
     return option;
 };
 let createOptionProperty = (labelText, propertyName, onChecked, onUnchecked, initialToggle, page) => 
-    createOption(labelText, () => setStyleVariable(propertyName, onChecked), () => setStyleVariable(propertyName, onUnchecked), initialToggle, page);
+    createOption(labelText, () => setDocStyleProp(propertyName, onChecked), () => setDocStyleProp(propertyName, onUnchecked), initialToggle, page);
 let createPageSelect = (labelText, page) => {
     let option = createElement(divString, options, { [onclick]: () => changeSettingsPage(page) }, 'opt.r');
     createElement(spanString, option, { [innerText]: labelText }, 'label');
@@ -3095,13 +3186,9 @@ let uploadZzal = createElement('input', null, {
         if (!useZzal) optionUseZzal.click();
     }
 });
-let addZzal = createElement('a', optionsWrite, {
-    [onclick]: () => uploadZzal.click()
-}, 'pv.r.b.o-f');
+let addZzal = createElement('a', optionsWrite, { [onclick]: () => uploadZzal.click() }, 'pv.r.b.o-f');
 createIcon(addZzal, 'add_photo_alternate');
-createElement(spanString, addZzal, {
-    [innerText]: str_uploadZzal
-});
+createElement(spanString, addZzal, { [innerText]: str_uploadZzal });
 let useZzal = false;
 let optionUseZzal = createOption(str_settings_useZzal, () => {
     useZzal = true;
@@ -3210,10 +3297,10 @@ createOptionProperty(str_settings_smoothScroll, scrollBehaviorName, 'smooth', 'a
 // 폰트 크기 확대
 let fontSizeName = '--fs';
 createOption(str_settings_bigFont, () => {
-    setStyleVariable(fontSizeName, '15px');
+    setDocStyleProp(fontSizeName, '15px');
     pullDown(true);
 }, () => {
-    setStyleVariable(fontSizeName, '13px');
+    setDocStyleProp(fontSizeName, '13px');
     pullDown(true);
 }, false, optionsChat);
 // 디시콘 크기 줄이기
@@ -3262,36 +3349,30 @@ let getPostContent = async (num, bForce = false) => {
         num: num,
         name: '',
         text: str_nullContent,
-        write: null,
+        write: '',
         esno: '',
         string: '',
     };
-    let html = await getAsText(getPostUrl(num)).catch(debug);
-    let parsed = parseHtml(html);
-    if (!parsed) return contentData;
+    let text = await getAsText(getPostUrl(num)).catch(debug);
 
-    let returnFunc = () => {
-        parsed.remove();
-        return contentData;
-    };
+    let returnFunc = () => contentData;
 
     // check captcha
-    if (parsed[querySelector]('#code_' + num)) bCaptchaComment = true;
+    if ((new RegExp(`id="code_${num}"`)).test(text)) bCaptchaComment = true;
     else bCaptchaComment = false;
 
-    let writeDivs = parsed[getElementsByClassName]('write_div');
-    if (!writeDivs.length) return returnFunc();
-    let writeDiv = writeDivs[0];
-    let head = parsed[querySelector]('.gallview_head');
+    let write = getInnerHtml(text, divString, 'write_div');
+    if (!write) return returnFunc();
+    let head = getInnerHtml(text, divString, 'gallview_head');
     if (!head) return returnFunc();
-    let writer = head[querySelector]('.gall_writer');
+    let writer = getOuterHtml(head, divString, 'gall_writer');
     if (!writer) return returnFunc();
-    contentData.name = writer.getAttribute('data-nick');
-    contentData.write = writeDiv;
-    contentData.text = replaceImage(replaceLink(trimHtml(neutralizeDccon(writeDiv.innerHTML))), 'pc-' + num);
-    let esno = parsed[querySelector]("[name='e_s_n_o']");
-    if (esno) contentData.esno = esno.value;
-    contentData.string = getSecretString(html);
+    contentData.name = getAttribute(writer, 'data-nick');
+    contentData.write = write;
+    contentData.text = replaceImage(replaceLink(trimHtml(neutralizeDccon(write))), 'pc-' + num);
+    let esno = getValueById(text, 'e_s_n_o');
+    if (esno) contentData.esno = esno;
+    contentData.string = getSecretString(text);
     postContentDatas[num] = contentData;
 
     // info to write comment
@@ -3308,7 +3389,7 @@ let getPostContent = async (num, bForce = false) => {
         t_vch2_chk: '',
         service_code: '',
     };
-    updateFormData(parsed, commentFormData);
+    updateFormData_v2(text, commentFormData);
     commentFormData.service_code = getSecondServiceCode(commentFormData.service_code, contentData.string);
     commentFormDatas[num] = commentFormData;
 
@@ -3361,8 +3442,7 @@ let _getPostComment = async (num, postData, commentData) => {
     return true;
 }
 let getPostComment = async (num) => {
-    let postContentData = await getPostContent(num).catch(debug);
-    let esno =  postContentData.esno;
+    let { esno } = await getPostContent(num).catch(debug);
     let lastCount = postCommentCount[num];
     let commentData = {
         count: lastCount,
@@ -3401,7 +3481,7 @@ let myPosts = [];
 let onPostData = async (postDatas, bForced = false) => {
     if (postDatas.length == 0) return;
     if (!bGreeted) bForced = true;
-    if (bFirstUpdate) newLine({ title: str_reconnected });
+    else if (bFirstUpdate) newLine({ title: str_reconnected });
     postDatas = postDatas.sort((a, b) => a.num - b.num);
     let lastNumCur = 0;
     for (let postData of postDatas) {
@@ -3480,7 +3560,9 @@ let genUpdateList = () => {
         try {
             text = text.replace(/(\n|\r|\t)/g, ''); // use replace instead of r due to worker compatibility
             let postDatas = [];
-            for (let match of text.matchAll(/<tr[^>]*class="([^"]*us-post[^"]*)"[^>]*data-no="([^"]*)".+?(?=<\/tr>)/g)) {
+            let matches = text.matchAll(/<tr[^>]*class="([^"]*us-post[^"]*)"[^>]*data-no="([^"]*)".+?<\/tr>/g);
+            if (!matches) return;
+            for (let match of matches) {
                 let post = match[0];
                 // 차단된 유저 건너뜀
                 if (match[1].includes('block-disable')) continue;
@@ -3662,28 +3744,19 @@ let onWritingBlocked = (bBlocked = true) => {
 
 refreshWriteSession = async() => {
     let html = await getAsText(getWriteUrl()).catch(debug);
-    let parsed = parseHtml(html);
-    if (!parsed) return onWritingBlocked();
-    let write = parsed[querySelector]('#write');
-    if (!write) {
-        parsed.remove();
-        return onWritingBlocked();
-    }
+    if (!/id="write"/.test(html)) return onWritingBlocked();
     onWritingBlocked(false);
-    updateFormData(parsed, formData);
+    updateFormData_v2(html, formData);
     // find service_code validation serial
     _secret = getSecretString(html);
-    bCaptcha = parsed[querySelector]('#code') && true;
+    bCaptcha = /id="code"/.test(html);
     if (bMini) {
         formData.headtext = 0; // 말머리 일반
         let key = bLogin ? 'nickname' : 'name';
-        let nickname = parsed[querySelector]('#' + key);
-        if (nickname) {
-            anonymousNickname = nickname.value;
-        }
+        let nickname = getValueById(html, key)
+        if (nickname) anonymousNickname = nickname;
         else anonymousNickname = '';
     }
-    parsed.remove();
     renderInputCaptcha();
     renderInputNickname();
     pullDown(true);
