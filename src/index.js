@@ -254,6 +254,14 @@ let str_features = decode('7J6Q64-Z7Kek67Cp6rO8IOq8rOumrOunkCDquLDriqXsnYQg7LaU6
 let str_changelog = decode('7KCE7LK0IOuzgOqyveyCrO2VrSDrs7TquLA.');
 /** "구매하지 않은 디시콘입니다." */
 let str_notBought = decode('6rWs66ek7ZWY7KeAIOyViuydgCDrlJTsi5zsvZjsnoXri4jri6Qu');
+/** "삭제" */
+let str_delete = decode('7IKt7KCc');
+/** "삭제하시겠습니까?" */
+let str_deleteTitle = decode('7IKt7KCc7ZWY7Iuc6rKg7Iq164uI6rmMPw..');
+/** "삭제된 게시물은 복구할 수 없습니다." */
+let str_deleteDesc = decode('7IKt7KCc65CcIOqyjOyLnOusvOydgCDrs7XqtaztlaAg7IiYIOyXhuyKteuLiOuLpC4.');
+/** "URL 복사" */
+let str_copyUrl = decode('VVJMIOuzteyCrA..');
 
 //#endregion
 
@@ -264,6 +272,7 @@ let body = doc.body;
 let head = doc.head;
 let storage = localStorage ?? null;
 let bWorkerAvailable = window.Worker && true;
+let bClipboardReadAvailable = window.navigator.clipboard.read && true;
 
 let bMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 let bMobileSafari = bMobileDevice && /Safari/i.test(navigator.userAgent);
@@ -285,7 +294,7 @@ let querySelector = 'querySelector';
 let innerText = 'innerText';
 let placeholder = 'placeholder';
 let onclick = 'onclick';
-let globalCompositeOperation = 'globalCompositeOperation';
+// let globalCompositeOperation = 'globalCompositeOperation';
 
 // document에 할당하여 실행할 전역 함수 이름
 let appName = 'dclivechat';
@@ -333,6 +342,8 @@ let boardForms = '/board/forms';
 let articleSubmit = boardForms + '/article_submit';
 let commentSubmit = boardForms + '/comment_submit';
 let dcconInsertIcon = '/dccon/insert_icon';
+let deleteSubmit = boardForms + '/delete_submit';
+let deletePasswordSubmit = boardForms + '/delete_password_submit';
 
 // 자주 쓰이는 함수
 let parse = Number.parseInt;
@@ -602,9 +613,11 @@ let enterAsClick = (input, submit, bShift = false) => {
     input.onkeypress = (ev) => {
         if (preventEnter) return;
         if (ev.key != 'Enter') return;
+        debug(ev);
         if (bMobileDevice && bShift) return;
         if (!bMobileDevice && bShift && ev.shiftKey) return;
         ev.preventDefault();
+        debug(submit);
         submit.click();
         input.oninput?.();
     };
@@ -707,7 +720,6 @@ let genUtil = () => {
         if (!matches) return null;
         let result = [];
         for (match of matches) {
-            if (DEBUG) _debug(match);
             if (match[1]) {
                 result.push([match[0], '']);
                 continue;
@@ -942,25 +954,40 @@ let postDeleteImage = (imgNum) => {
     let url = getBoardUrlPlain() + 'temp/upimg_pop_del';
     postAsText(url, options, body).catch(debug).then(res => (res != 'true') && openAlert(str_deleteFail));
 }
-// let postDelete = async (num) => {
-//     let html = await getAsText(getDeleteUrl(num));
-//     if (!html) return falseString('not available');
-//     let parsed = getAsDocument();
-//     if (!parsed) return falseString('not available');
-//     let data = {
-//         ci_t: '',
-//         id: '',
-//         no: '',
-//         key: '',
-//         dcc_key: '',
-//         service_code: '',
-//         cur_t: '',
-//     }
-//     updateFormData(parsed, data);
-//     let secret = getSecretString(html);
-//     if (!secret) return falseString('no secret');
-//     data.service_code = getSecondServiceCode(data.service_code, secret);
-// }
+let postDelete = async (num, password = '') => {
+    let html = await getAsText(getDeleteUrl(num));
+    if (!html) return falseString('not available');
+    let form = html.match(/<form[^>]+name="delete".+?<\/form>/);
+    if (!form) return falseString('no form');
+    form = form[0];
+    let data = {
+        [grecaptchaResponse]: '',
+        _GALLTYPE_: gallType,
+    };
+    updateFormDataV3(form, data);
+    let secret = getSecretString(html);
+    if (!secret) return falseString('no secret');
+    data.service_code = getSecondServiceCode(data.service_code, secret);
+    let match = html.match(/formData \+= "&([0-9a-z]+)=([0-9a-z]+)&/);
+    if (!match) return falseString('not valid');
+    data[match[1]] = match[2];
+    if (password) data.password = password;
+    // dcc_key_v1
+    match = html.match(/dcc_key_v1 = document.getElementById\(["']([^"']+)["']\).getAttribute\(["']([^"']+)["']/);
+    if (match) {
+        let dcc_key_v1 = html.match(new RegExp(`<input[^>]+id=["']${match[1]}["'][^>]*>`));
+        if (dcc_key_v1) data.dcc_key_v1 = getAttribute(dcc_key_v1[0], match[2]);
+    }
+    let res = await postWrite(password ? deletePasswordSubmit : deleteSubmit, data);
+    if (res) {
+        let splits = res.split('||');
+        if (splits.length > 2 && splits[1] == 'captcha') {
+            await executeCaptcha(splits[2], data, 'delete_submit');
+            await postWrite(deleteSubmit, data);
+        }
+    }
+    return res;
+}
 
 //#endregion
 
@@ -1286,6 +1313,7 @@ let setIntervalIndex = (index) => {
     if (worker) worker.postMessage({type:'iv', iv: interval});
 };
 
+/*
 let updateFormData = (html, data) => {
     for (let id in data) {
         let value = html[querySelector]('#' + id);
@@ -1299,8 +1327,9 @@ let updateFormData = (html, data) => {
     if (!gallNum && formData.gallery_no) gallNum = formData.gallery_no;
     if (formData.r_key) rKey = formData.r_key;
 };
+*/
 
-let updateFormData_v2 = (text, data) => {
+let updateFormDataV2 = (text, data) => {
     for (let id in data) {
         let value = getValueById(text, id);
         if (value) data[id] = value;
@@ -1309,6 +1338,13 @@ let updateFormData_v2 = (text, data) => {
     if (!gallNum && formData.gallery_no) gallNum = formData.gallery_no;
     if (formData.r_key) rKey = formData.r_key;
 };
+let updateFormDataV3 = (text, data) => {
+    let matches = text.matchAll(/<input[^>]+name=["']([^"']+)["'][^>]+value=["']([^"']+)["']/g);
+    if (!matches) return;
+    for (let match of matches) {
+        data[match[1]] = match[2];
+    }
+}
 
 //#endregion
 
@@ -1460,6 +1496,7 @@ createElement('link', head, {
 });
 
 // favicon
+/*
 let setFaviconColor = (() => {
     let favicon = createElement('link', head, {
         rel: 'icon',
@@ -1486,6 +1523,7 @@ let setFaviconColor = (() => {
         favicon.href = canvas.toDataURL();
     };
 })();
+*/
 
 if (bMobileDevice) initCaptchaV3();
 
@@ -1514,18 +1552,18 @@ let renderOverlay = (bForce = false) => {
 }
 let enterUp = true;
 doc.addEventListener('keyup', (ev) => {
-    if (ev.key !== 'Enter') return;
+    if (ev.key != 'Enter') return;
     enterUp = true;
 });
 doc.addEventListener('keypress', (ev) => {
     if (!enterUp) return;
     if (ev.key !== 'Enter') return;
     if (!preventEnter) return;
-    overlay.lastChild.enter?.();
+    if (overlay.lastChild) overlay.lastChild.enter?.();
     enterUp = false;
 });
 
-let openModal = ({title, desc, options, close, html, input}) => {
+let openModal = ({title, desc, options, close, html, input, nowrap}) => {
     if (!options) options = [{ text: str_confirm, [onclick]: (close) => close() }];
     let modal = createElement(divString, overlay, 'modal');
     if (title) createElement(divString, modal, { [innerText]: title }, 'tt');
@@ -1540,15 +1578,20 @@ let openModal = ({title, desc, options, close, html, input}) => {
     }
     if (close) createIcon(createElement('a', modal, { [onclick]: closeModal }, 'b.close.abs-tr'), 'close');
     if (input !== undefined) {
-        modal.input = createElement('textarea', modal, { value: input });
+        if (nowrap) modal.input = createElement('input', modal, { type:'password', value: input }, 'nowrap');
+        else modal.input = createElement('textarea', modal, { value: input });
     }
     let optionContainer = createElement(divString, modal, 'opts.fr');
     if (options.length === 1) options[0].enter = true;
     for (let option of options) {
+        let wait = () => {
+            optionDiv[innerText] = '';
+            createIcon(optionDiv, 'progress_activity', 'progress');
+        };
         let bIcon = (option.icon != undefined);
         let optionDiv = createElement('a', optionContainer, {
             [innerText]: bIcon ? '' : (option.text ?? option),
-            [onclick]: option.onclick ? () => option.onclick(closeModal) : closeModal,
+            [onclick]: option.onclick ? () => option.onclick(closeModal, wait) : closeModal,
         }, 'sb.r');
         if (bIcon) {
             createIcon(optionDiv, option.icon);
@@ -1612,6 +1655,34 @@ let addTooltip = (element, { text, top = false }, ...classes) => {
     createElement(spanString, tooltip, { innerText: text });
     return tooltip;
 };
+
+let context;
+let addContext = (element, options = []) => {
+    element.oncontextmenu = (ev) => {
+        ev.preventDefault();
+        let x = ev.clientX;
+        let y = ev.clientY;
+        if (context) context.remove();
+        context = createElement(divString, body, 'p.ctx');
+        context.style.left = x + 'px';
+        context.style.top = y + 'px';
+    
+        for (option of options) {
+            if (option.hr) {
+                createElement('hr', context);
+                continue;
+            }
+            let entry = createElement('a', context, 'fr.b');
+            if (option.icon) createIcon(entry, option.icon);
+            if (option.text) createElement(spanString, entry, { [innerText]: option.text });
+            if (option[onclick]) entry[onclick] = option[onclick];
+        }
+    }
+};
+doc.addEventListener('click', () => {
+    if (context) context.remove();
+    context = null;
+});
 
 let main = createElement('main', body);
 
@@ -2040,7 +2111,7 @@ let checkAddNotification = (postNum, commentNum, commentDiv = null) => {
     }
     let key = getNotificationKey(postNum, commentNum);
     if (!listeningFunc[key]) {
-        if (DEBUG) debug('comment', commentNum, 'is not a comment in intereste');
+        if (DEBUG) debug('comment', commentNum, 'is not a comment in interest');
         return;
     }
     let notification = notificationList.find(list => list[0] == key);
@@ -2138,11 +2209,14 @@ let checkMaxPost = () => {
     let nodes = chatPage.childNodes;
     while (nodes.length > maxPost) {
         let childNode = nodes[0];
-        let removed = childNode[getElementsByClassName]('removed');
-        if (removed && removed.length) removed[0].value = true;
-        childNode.remove();
-        pullDown(true);
+        removeChat(childNode);
     }
+}
+let removeChat = (element) => {
+    let removed = element[getElementsByClassName]('removed');
+    if (removed && removed.length) removed[0].value = true;
+    element.remove();
+    pullDown(true);
 }
 
 // 채팅창 스크롤 고정 효과
@@ -2478,6 +2552,75 @@ let newLine = async (postData) => {
         showLine(line);
     }
     if (!bPullDown) checkMaxPost();
+
+    // context menu
+    let contextOptions = [];
+    if (my || ip || (bLogin && id == userId)) contextOptions.push({
+        text: str_delete,
+        icon: 'delete',
+        [onclick]: () => {
+            openModal({
+                title: str_deleteTitle,
+                desc: str_deleteDesc,
+                options: [{
+                    text: str_confirm,
+                    [onclick]: async (close, wait) => {
+                        wait();
+                        let password = '';
+                        if (ip) { // 유동 삭제
+                            let { r, p } = initPromise();
+                            let pwModal = openModal({
+                                title: 'password',
+                                input: password,
+                                nowrap: true,
+                                options: [{
+                                    text: str_confirm,
+                                    [onclick]: (_close) => {
+                                        password = pwModal.input.value;
+                                        if (password.length < 2) return openAlert(str_shortPassword);
+                                        r(true);
+                                        _close();
+                                    }
+                                }, {
+                                    text:str_cancel,
+                                    [onclick]: (_close) => {
+                                        r(false);
+                                        _close();
+                                    }
+                                }]
+                            })
+                            if (!await p) return close();
+                        }
+                        let res = await postDelete(num, password);
+                        close();
+                        let splits = res.split('||');
+                        if (splits[0] == 'false') return openAlert(splits[1]);
+                        removeChat(line);
+                    }
+                }, {
+                    text: str_cancel
+                }]
+            })
+        }
+    }, {
+        hr: true,
+    });
+    contextOptions.push({
+        text: str_openInNew,
+        icon: 'open_in_new',
+        [onclick]: (close) => {
+            let temp = createElement('a', null, { href: getPostUrl(num), target: '_blank' });
+            temp.click();
+            temp.remove();
+            close();
+        }
+    }, {
+        text: str_copyUrl,
+        [onclick]: () => {
+            window.navigator.clipboard.writeText(getPostUrl(num));
+        }
+    });
+    if (contextOptions.length) addContext(line, contextOptions);
 };
 
 //#endregion
@@ -3105,6 +3248,27 @@ dropArea.ondrop = (ev) => {
     }
 }
 
+// paste 지원
+if (bClipboardReadAvailable) doc.addEventListener('paste', async () => {
+    let clipboard = await window.navigator.clipboard.read();
+    let imageCount = 0;
+    for (let item of clipboard) {
+        debug(item);
+        let match = null;
+        for (let type of item.types) {
+            match = type.match(/image\/(.+)$/);
+            debug(match);
+            if (match) break;
+        }
+        debug(match);
+        if (!match) continue;
+        let blob = await item.getType(match[0]);
+        let file = new File([ blob ], `image_${imageCount}.${match[1]}`);
+        onFileDropped(file);
+        imageCount += 1;
+    }
+});
+
 let uploadIcon = createIcon(upload, 'add_circle');
 let uploadNum = createElement('span', upload, { [innerText]: 0 }, 'cnt.abs-tr', hidden);
 
@@ -3389,7 +3553,7 @@ let getPostContent = async (num, bForce = false) => {
         t_vch2_chk: '',
         service_code: '',
     };
-    updateFormData_v2(text, commentFormData);
+    updateFormDataV2(text, commentFormData);
     commentFormData.service_code = getSecondServiceCode(commentFormData.service_code, contentData.string);
     commentFormDatas[num] = commentFormData;
 
@@ -3746,7 +3910,7 @@ refreshWriteSession = async() => {
     let html = await getAsText(getWriteUrl()).catch(debug);
     if (!/id="write"/.test(html)) return onWritingBlocked();
     onWritingBlocked(false);
-    updateFormData_v2(html, formData);
+    updateFormDataV2(html, formData);
     // find service_code validation serial
     _secret = getSecretString(html);
     bCaptcha = /id="code"/.test(html);
@@ -3879,7 +4043,7 @@ let writePost = async (title, content) => {
         content = content.r(dcconString, makeDcconContent(url, dcconTitle, dccon.idx));
     }
 
-    lastData.memo = imageContent + linkContent + str_lineBreak + dcconContent + content;
+    lastData.memo = encode(imageContent + linkContent + str_lineBreak + dcconContent + content);
     let res = await postWrite(articleSubmit, formData, additionalFormData, lastData).catch(debug);
     if (res) {
         let splits = res.split('||');
@@ -3967,7 +4131,7 @@ let writeComment = async (num, body, target = 0) => {
         if (captcha.length == 0) return falseString(str_nullCode);
         additionalFormData.code = captcha;
     }
-    additionalFormData.memo = body;
+    additionalFormData.memo = encode(body);
     let data = {
         id: gallId,
         no: num,

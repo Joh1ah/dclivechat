@@ -19,6 +19,8 @@ $colorHighlightLight: #8c62a8;
 
 $colorWarning: #d42727;
 
+$shadowWidth: 2px;
+
 * {
     text-align: center;
     justify-content: center;
@@ -178,7 +180,7 @@ a, span {
 }
 
 .modal {
-    box-shadow: $colorBackgroundDark 0 0 4px;
+    box-shadow: $colorBackgroundDark 0 0 $shadowWidth;
     background: $colorBackground;
     padding: 20px 30px;
     min-width: 200px;
@@ -194,9 +196,14 @@ a, span {
         padding: 0 10px;
         >a {
             margin: 0 4px;
+            >.progress {
+                animation: rotate-cw 1s infinite;
+                font-size: 1.6em;
+                padding: 0;
+            }
         }
     }
-    >textarea {
+    >textarea, >input {
         white-space: pre-wrap;
         height: 3.2em;
         margin: 18px;
@@ -206,8 +213,34 @@ a, span {
             margin-bottom: 0;
             color: rgb(var(--cfd));
         }
+        &.nowrap {
+            height: 1.6em;
+        }
     }
 }
+
+.ctx {
+    z-index: 3 !important;
+    position: fixed;
+    padding: 4px 10px;
+    >.b {
+        width: 100%;
+        min-width: 8em;
+        margin: 0;
+        justify-content: flex-start;
+        >.icon {
+            font-size: 1em;
+            margin-right: .2em;
+        }
+    }
+    >hr {
+        width: 100%;
+        height: 1px;
+        background: $colorForegroundDark;
+        margin: 4px 0;
+    }
+}
+
 .footer-static {
     position: relative;
     border-radius: 0 0 4px 4px;
@@ -247,7 +280,7 @@ a, span {
         opacity: 0;
         transition: opacity .2s;
         padding: 2px 4px;
-        box-shadow: $colorShadow 0 0 4px;
+        box-shadow: $colorShadow 0 0 $shadowWidth;
         z-index: 1;
         font-weight: normal;
         white-space: nowrap;
@@ -301,13 +334,13 @@ a, span {
         width: calc(100% - 10px);
         color: $colorForegroundDark;
         background: linear-gradient($colorBackground, transparent);
-        box-shadow: $colorBackground 0 -2px 4px;
+        box-shadow: $colorBackground 0 -2px $shadowWidth;
         >* {
             color: $colorForegroundDark;
         }
         &:hover {
             background: $colorBackgroundLight;
-            box-shadow: $colorBackground 0 0 4px;
+            box-shadow: $colorBackground 0 0 $shadowWidth;
         }
     }
     .cm {
@@ -321,7 +354,7 @@ a, span {
         display: flex;
         width: calc(100% - 10px);
         background: $colorBackground;
-        box-shadow: $colorBackground 0 0 4px;
+        box-shadow: $colorBackground 0 0 $shadowWidth;
         font-weight: bold;
         margin-top: 10px;
         &:hover {
@@ -593,7 +626,7 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
     }
     margin: .2em 0;
     margin-right: 3px;
-    box-shadow: $colorBackground 0 0 4px;
+    box-shadow: $colorBackground 0 0 $shadowWidth;
     justify-content: flex-start;
     align-self: flex-end;
     align-items: flex-start;
@@ -1269,7 +1302,7 @@ $previewImageSize: 140px;
     width: $previewSize;
     margin: $previewMargin;
     padding: 0;
-    box-shadow: $colorBackgroundDark 0 0 4px;
+    box-shadow: $colorBackgroundDark 0 0 $shadowWidth;
     >.image {
         position: relative;
         height: $previewImageSize;
@@ -1303,7 +1336,7 @@ $previewImageSize: 140px;
     >.close {
         margin: -4px;
         background: $colorBackground;
-        box-shadow: $colorBackgroundDark 0 0 4px;
+        box-shadow: $colorBackgroundDark 0 0 $shadowWidth;
         &:hover {
             background: $colorBackgroundLight;
         }
@@ -1535,5 +1568,13 @@ $previewImageSize: 140px;
     }
     100% {
         rotate: 0deg;
+    }
+}
+@keyframes rotate-cw {
+    0% {
+        rotate: 0deg;
+    }
+    100% {
+        rotate: 360deg;
     }
 }

@@ -57,6 +57,9 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 ## Changelog
 v2.3.0-20231012
 * 글 및 댓글 삭제 기능 추가
+* 글 및 댓글에 컨텍스트 메뉴 추가
+* 이미지 붙여넣기 시 업로드 기능 추가
+* 댓글에 일부 문자가 표시되지 않는 오류 수정
 * 글 내용 불러오기 시 메모리 사용량 개선
 
 v2.2.4-20231011
