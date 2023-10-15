@@ -2466,8 +2466,8 @@ let newLine = async (postData) => {
                 }
                 
                 // 시그니처 확인
-                let my = text.length > commentSignitureLength && text.substring(text.length - commentSignitureLength) == lastSigniture;
-                if (my) {
+                let myComment = text.length > commentSignitureLength && text.substring(text.length - commentSignitureLength) == lastSigniture;
+                if (myComment) {
                     // 자신의 댓글인 경우, 알림 설정
                     lastSigniture = '';
                     appendListener(num, targetNum ? targetNum : commentNum, (newDiv) => {
@@ -2498,10 +2498,11 @@ let newLine = async (postData) => {
                 // delete
                 let contextOptions = [{
                     text: str_delete,
+                    icon: 'delete',
                     [onclick]: async () => {
                         let password = '';
                         let { delId, delValue, vCurT } = await getPostContent(num).catch(debug);
-                        if (comment.ip) {
+                        if (ip || comment.ip) {
                             let { r, p } = initPromise();
                             let modal = openModal({
                                 title: str_password,
@@ -2528,12 +2529,15 @@ let newLine = async (postData) => {
                         let res = await postDeleteComment(commentNum, { num: num, id: delId, value: delValue, vCurT: vCurT }, password);
                         if (!res) openAlert(str_error_generic);
                         let splits = res.split('||');
-                        if (splits[0] == 'true') return updateComment();
+                        if (splits[0] == 'true') {
+                            commentEntry.remove();
+                            return updateComment();
+                        }
                         if (splits.length == 1) return openAlert(res);
                         openAlert(str_error_generic);
                     }
                 }];
-                if (my || comment.ip || comment.id == userId) addContext(commentEntry, contextOptions);
+                if (my || ip || myComment || comment.ip || comment.id == userId) addContext(commentEntry, contextOptions);
             }
             checkAnyMore();
             pullDown(true);
