@@ -4,7 +4,7 @@
 
 <img src="https://nstatic.dcinside.com/dc/w/images/logo_icon.ico" style="width:1em;height:1em"> [라이브챗 갤러리](http://gall.dcinside.com/mini/livechat)
 
-최신 버전: `2.3.0-20231012`
+최신 버전: `2.3.0-20231015`
 
 <br>
 
@@ -55,9 +55,10 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 <br>
 
 ## Changelog
-v2.3.0-20231012
-* 글 및 댓글 삭제 기능 추가
-* 글 및 댓글에 컨텍스트 메뉴 추가
+v2.3.0-20231015
+* 컨텍스트 메뉴 추가
+    * 글 및 댓글 삭제
+    * ID/IP/닉네임/키워드 차단
 * 이미지 붙여넣기 업로드 지원
 * 댓글에 일부 문자가 표시되지 않는 오류 수정
 * 글 내용 불러오기 시 메모리 사용량 개선

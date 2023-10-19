@@ -262,6 +262,24 @@ let str_deleteTitle = decode('7IKt7KCc7ZWY7Iuc6rKg7Iq164uI6rmMPw..');
 let str_deleteDesc = decode('7IKt7KCc65CcIOqyjOyLnOusvOydgCDrs7XqtaztlaAg7IiYIOyXhuyKteuLiOuLpC4.');
 /** "URL 복사" */
 let str_copyUrl = decode('VVJMIOuzteyCrA..');
+/** "ID 차단" */
+let str_block_id = decode('SUQg7LCo64uo');
+/** "IP 차단" */
+let str_block_ip = decode('SVAg7LCo64uo');
+/** "닉네임 차단" */
+let str_block_name = decode('64uJ64Sk7J6EIOywqOuLqA..');
+/** "다음 이용자를 차단하시겠습니까?" */
+let str_blockUserTitle = decode('64uk7J2MIOydtOyaqeyekOulvCDssKjri6jtlZjsi5zqsqDsirXri4jquYw_');
+/** "키워드 차단" */
+let str_block_word = decode('7YKk7JuM65OcIOywqOuLqA..');
+/** "전체 차단" */
+let str_blockAll = decode('7KCE7LK0IOywqOuLqA..');
+/** "갤러리 차단" */
+let str_blockGall = decode('6rCk65-s66asIOywqOuLqA..');
+/** "추가" */
+let str_add = decode('7LaU6rCA');
+/** "차단 설정" */
+let str_settings_block = decode('7LCo64uoIOyEpOyglQ..');
 
 //#endregion
 
@@ -366,6 +384,7 @@ let gallId = '';
 let gallType = '';
 let rKey = '';
 let gallNum = '';
+let gallName = '';
 let bMobile = false;
 let bMinor = true;
 let bMini = false;
@@ -610,15 +629,14 @@ let removeClass = (element, ...className) => {
 };
 let scrollToTop = () => scrollTo(0, 0);
 let preventEnter = false;
-let enterAsClick = (input, submit, bShift = false) => {
+let enterAsClick = (input, submit, bShift = false, bForce = false) => {
     input.onkeypress = (ev) => {
-        if (preventEnter) return;
+        if (!bForce && preventEnter) return;
         if (ev.key != 'Enter') return;
-        debug(ev);
+        if (DEBUG) debug(ev);
         if (bMobileDevice && bShift) return;
         if (!bMobileDevice && bShift && ev.shiftKey) return;
         ev.preventDefault();
-        debug(submit);
         submit.click();
         input.oninput?.();
     };
@@ -1448,6 +1466,86 @@ let loadOptions = () => {
 let clearSaveData = () => saveOptions({});
 // 로드는 초기화 마지막 순서로
 
+// blocked
+let getBlockAll = () => {
+    let json = storage?.getItem('block_all');
+    if (!json) return {
+        on: 0,
+        word: '',
+        id: '',
+        nick: '',
+        ip: '',
+    };
+    return JSON.parse(json);
+};
+let getBlockParts = () => {
+    let json = storage?.getItem('block_parts');
+    if (!json) return {};
+    return JSON.parse(json);
+};
+let getBlockGall = (id, name) => getBlockParts()[id] ?? {
+    on: 0,
+    word: '',
+    id: '',
+    nick: '',
+    ip: '',
+    name: name,
+};
+let setBlockAll = (o) => storage?.setItem('block_all', JSON.stringify(o));
+let setBlockParts = (o) => storage?.setItem('block_parts', JSON.stringify(o));
+
+let isBlocked = (postData, blockData) => {
+    if (!blockData.on) return false;
+    return _isBlocked(postData, 'title', blockData, 'word', true)
+        || _isBlocked(postData, 'nickname', blockData, 'nick')
+        || _isBlocked(postData, 'id', blockData, 'id')
+        || _isBlocked(postData, 'ip', blockData, 'ip');
+}
+let _isBlocked = (postData, key, blockData, id, include = false) => {
+    if (!blockData[id]) return false;
+    let splits = blockData[id].split('||');
+    for (let split of splits) {
+        if (include) {
+            if (postData[key].includes(split)) return true;
+        } else {
+            if (postData[key] == split) return true;
+        }
+    }
+    return false;
+};
+let updateBlockAll = (o) => {
+    setBlockAll(o);
+    for (let line of chatLines) {
+        if (isBlocked(line, o)) addClass(line.chat, 'block');
+        else removeClass(line.chat, 'block');
+    }
+}
+let updateBlockGall = (o, id) => {
+    let blockParts = getBlockParts();
+    blockParts[id] = o;
+    setBlockParts(blockParts);
+    for (let line of chatLines) {
+        if (isBlocked(line, o)) addClass(line.chat, 'block');
+        else removeClass(line.chat, 'block');
+    }
+}
+let addBlock = (o, key, keyword) => {
+    let splits = o[key].split('||').filter(t => t != '');
+    if (!splits.includes(keyword)) splits.push(keyword);
+    o[key] = splits.join('||');
+}
+let removeBlock = (o, key, keyword) => {
+    let splits = o[key].split('||').filter(t => t != '');
+    for (let i = 0; i < splits.length; i++) {
+        let split = splits[i];
+        if (split == keyword) {
+            splits.splice(i, 1);
+            break;
+        }
+    }
+    o[key] = splits.join('||');
+}
+
 (async() => {
     let html = await getAsText(getListUrl()).catch(debug);
     let loginBox = getInnerHtml(html, divString, 'login_box');
@@ -1474,6 +1572,10 @@ let clearSaveData = () => saveOptions({});
     }
     if (DEBUG) debug('login', bLogin);
     onLoginChecked?.();
+
+    // gall name
+    gallName = getValueById(html, 'gallery_name');
+    blockGallLabel[innerText] = str_blockGall + ' - ' + gallName;
 })();
 
 // 기존 화면 제거
@@ -1590,9 +1692,11 @@ let openModal = ({title, desc, options, close, html, input, nowrap}) => {
     if (!options) options = [{ text: str_confirm, [onclick]: (close) => close() }];
     let modal = createElement(divString, overlay, 'modal');
     if (title) createElement(divString, modal, { [innerText]: title }, 'tt');
+    let content = createElement(divString, modal, 'desc');
+    modal.content = content;
     if (desc) {
-        if (html) createElement(divString, modal, { innerHTML: desc }, 'desc');
-        else createElement(divString, modal, { [innerText]: desc }, 'desc');
+        if (html) content.innerHTML = desc;
+        else content[innerText] = desc;
     }
     let closeModal = () => {
         addClass(modal, hidden);
@@ -1608,19 +1712,22 @@ let openModal = ({title, desc, options, close, html, input, nowrap}) => {
     if (options.length === 1) options[0].enter = true;
     for (let option of options) {
         let wait = () => {
-            optionDiv[innerText] = '';
-            createIcon(optionDiv, 'progress_activity', 'progress');
+            button[innerText] = '';
+            createIcon(button, 'progress_activity', 'progress');
         };
         let bIcon = (option.icon != undefined);
-        let optionDiv = createElement('a', optionContainer, {
+        let button = createElement('a', optionContainer, {
             [innerText]: bIcon ? '' : (option.text ?? option),
             [onclick]: option.onclick ? () => option.onclick(closeModal, wait) : closeModal,
         }, 'sb.r');
         if (bIcon) {
-            createIcon(optionDiv, option.icon);
-            createElement(spanString, optionDiv, { [innerText]: option.text });
+            createIcon(button, option.icon);
+            createElement(spanString, button, { [innerText]: option.text });
         }
-        if (option.enter) timeout(() => modal.enter = () => optionDiv.click(), 100);
+        if (option.enter) timeout(() => {
+            modal.enter = () => button.click();
+            if (nowrap) enterAsClick(modal.input, button, false, true);
+        }, 100);
     }
     renderOverlay();
     return modal;
@@ -2236,6 +2343,13 @@ let checkMaxPost = () => {
     }
 }
 let removeChat = (element) => {
+    for (let i = 0; i < chatLines.length; i++) {
+        let line = chatLines[i];
+        if (line.chat == element) {
+            chatLines.splice(i, 1);
+            break;
+        }
+    }
     let removed = element[getElementsByClassName]('removed');
     if (removed && removed.length) removed[0].value = true;
     element.remove();
@@ -2260,6 +2374,7 @@ togglePullDown = () => {
     }
 };
 
+let chatLines = [];
 let postContentDatas = {};
 let postCommentCount = {};
 let onPostCommentCountChanged = {};
@@ -2274,10 +2389,7 @@ let newLine = async (postData) => {
     let num = postData.num;
     let line = createElement(divString, chatPage, 'chl', hidden);
     // 이미 채팅창에서 제거된 요소인지 여부를 저장
-    let removed = createElement('input', line, {
-        type: hidden,
-        value: false,
-    }, 'removed');
+    let removed = createElement('input', line, { type: hidden, value: false, }, 'removed');
     let titleDiv = createElement(divString, line, 'tt.r');
     let inline = createElement(spanString, titleDiv);
     let name = postData.nickname;
@@ -2287,6 +2399,20 @@ let newLine = async (postData) => {
     let img = postData.img;
     let fix = postData.fix;
     let my = postData.my ?? false;
+
+    let blockAll = getBlockAll();
+    let blockGall = getBlockGall(gallId, gallName);
+    let blocked = isBlocked(postData, blockAll) || isBlocked(postData, blockGall);
+    if (blocked) addClass(line, 'block');
+
+    chatLines.push({
+        chat: line,
+        title: title,
+        id: id,
+        ip: ip,
+        nickname: name
+    });
+
     if (name) createWriter(inline, name, id, ip, img, fix);
     else addClass(line, 'notify'); // 이름이 주어지지 않으면 알림 메시지로 취급
 
@@ -2634,6 +2760,7 @@ let newLine = async (postData) => {
                 desc: str_deleteDesc,
                 options: [{
                     text: str_confirm,
+                    enter: true,
                     [onclick]: async (close, wait) => {
                         wait();
                         let password = '';
@@ -2645,6 +2772,7 @@ let newLine = async (postData) => {
                                 nowrap: true,
                                 options: [{
                                     text: str_confirm,
+                                    enter: true,
                                     [onclick]: (_close) => {
                                         password = pwModal.input.value;
                                         if (password.length < 2) return openAlert(str_shortPassword);
@@ -2675,21 +2803,121 @@ let newLine = async (postData) => {
     }, {
         hr: true,
     });
-    if (num) contextOptions.push({
-        text: str_openInNew,
-        icon: 'open_in_new',
-        [onclick]: (close) => {
-            let temp = createElement('a', null, { href: getPostUrl(num), target: '_blank' });
-            temp.click();
-            temp.remove();
-            close();
+    if (num) {
+        contextOptions.push({
+            text: str_openInNew,
+            icon: 'open_in_new',
+            [onclick]: () => {
+                let temp = createElement('a', null, { href: getPostUrl(num), target: '_blank' });
+                temp.click();
+                temp.remove();
+            }
+        }, {
+            text: str_copyUrl,
+            [onclick]: () => {
+                window.navigator.clipboard.writeText(getPostUrl(num));
+            }
+        });
+        if (!my && (ip || id != userId)) {
+            // 차단
+            contextOptions.push({ hr: true });
+            if (!ip) {
+                // 고닉 차단
+                contextOptions.push({
+                    text: str_block_id,
+                    [onclick]: () => {
+                        openModal({
+                            title: str_blockUserTitle,
+                            desc: 'ID: ' + id,
+                            options: [{
+                                text: str_blockGall,
+                                [onclick]: (close) => {
+                                    let block = getBlockGall(gallId, gallName);
+                                    block.on = 1;
+                                    addBlock(block, 'id', id);
+                                    updateBlockGall(block, gallId);
+                                    close();
+                                }
+                            }, {
+                                text: str_blockAll,
+                                [onclick]: (close) => {
+                                    let block = getBlockAll();
+                                    block.on = 1;
+                                    addBlock(block, 'id', id);
+                                    updateBlockAll(block);
+                                    close();
+                                }
+                            }, {
+                                text: str_cancel,
+                            }]
+                        });
+                    }
+                });
+            } else {
+                // 유동 차단
+                contextOptions.push({
+                    text: str_block_ip,
+                    [onclick]: () => {
+                        openModal({
+                            title: str_blockUserTitle,
+                            desc: 'IP: ' + ip,
+                            options: [{
+                                text: str_blockGall,
+                                [onclick]: (close) => {
+                                    let block = getBlockGall(gallId, gallName);
+                                    block.on = 1;
+                                    addBlock(block, 'ip', ip);
+                                    updateBlockGall(block, gallId);
+                                    close();
+                                }
+                            }, {
+                                text: str_blockAll,
+                                [onclick]: (close) => {
+                                    let block = getBlockAll();
+                                    block.on = 1;
+                                    addBlock(block, 'ip', ip);
+                                    updateBlockAll(block);
+                                    close();
+                                }
+                            }, {
+                                text: str_cancel,
+                            }]
+                        });
+                    }
+                });
+            }
+            contextOptions.push({
+                text: str_block_name,
+                [onclick]: () => {
+                    openModal({
+                        title: str_blockUserTitle,
+                        desc: name,
+                        options: [{
+                            text: str_blockGall,
+                            [onclick]: (close) => {
+                                let block = getBlockGall(gallId, gallName);
+                                block.on = 1;
+                                addBlock(block, 'nick', name);
+                                updateBlockGall(block, gallId);
+                                close();
+                            }
+                        }, {
+                            text: str_blockAll,
+                            [onclick]: (close) => {
+                                let block = getBlockAll();
+                                block.on = 1;
+                                addBlock(block, 'nick', name);
+                                updateBlockAll(block);
+                                close();
+                            }
+                        }, {
+                            text: str_cancel,
+                        }]
+                    });
+                }
+            });   
         }
-    }, {
-        text: str_copyUrl,
-        [onclick]: () => {
-            window.navigator.clipboard.writeText(getPostUrl(num));
-        }
-    });
+    }
     if (contextOptions.length) {
         addContext(titleDiv, contextOptions);
         addContext(postContentVp, contextOptions);
@@ -3367,6 +3595,7 @@ let settingsBack = createElement('a', settingsPanel, { [onclick]: () => changeSe
 createIcon(settingsBack, 'navigate_before'); 
 let settingsPage = createElement(divString, settingsPanel);
 let options = createElement(divString, settingsPage, 'opts');
+let optionsBlock = createElement(divString, settingsPage, 'opts', hidden);
 let optionsWrite = createElement(divString, settingsPage, 'opts', hidden);
 let optionsChat = createElement(divString, settingsPage, 'opts', hidden);
 
@@ -3380,11 +3609,13 @@ changeSettingsPage = (page = options) => {
 };
 
 // 옵션 엔트리 작성 및 브라우저 저장/로드
-let createOption = (labelText, onChecked, onUnchecked, initialToggle = false, page = options) => {
+let createOption = (labelText, icon, onChecked, onUnchecked, initialToggle = false, page = options) => {
     let toggled = initialToggle;
     let option = createElement(divString, page, 'opt');
     if (toggled) addClass(option, 'chk');
-    createElement(spanString, option, { [innerText]: labelText }, 'label');
+    let wrap = createElement(divString, option, 'label.fr');
+    if (icon) createIcon(wrap, icon);
+    createElement(spanString, wrap, { [innerText]: labelText });
     let changeToggled = (bool) => {
         toggled = bool;
         if (toggled) {
@@ -3401,14 +3632,80 @@ let createOption = (labelText, onChecked, onUnchecked, initialToggle = false, pa
     _applyOption(labelText, initialToggle);
     return option;
 };
-let createOptionProperty = (labelText, propertyName, onChecked, onUnchecked, initialToggle, page) => 
-    createOption(labelText, () => setDocStyleProp(propertyName, onChecked), () => setDocStyleProp(propertyName, onUnchecked), initialToggle, page);
-let createPageSelect = (labelText, page) => {
+let createOptionProperty = (labelText, icon, propertyName, onChecked, onUnchecked, initialToggle, page) => 
+    createOption(labelText, icon, () => setDocStyleProp(propertyName, onChecked), () => setDocStyleProp(propertyName, onUnchecked), initialToggle, page);
+let createPageSelect = (labelText, page, icon = '') => {
     let option = createElement(divString, options, { [onclick]: () => changeSettingsPage(page) }, 'opt.r');
-    createElement(spanString, option, { [innerText]: labelText }, 'label');
+    let wrap = createElement(divString, option, 'label.fr');
+    if (icon) createIcon(wrap, icon);
+    createElement(spanString, wrap, { [innerText]: labelText });
     createIcon(option, 'navigate_next', 'abs-r');
     return option;
 };
+
+// optionsBlock page
+createPageSelect(str_settings_block, optionsBlock, 'block');
+let createBlockOption = (label, parent, bAll, key) => {
+    let option = createElement('a', parent, {
+        [onclick]: () => {
+            let modal = openModal({
+                title: label,
+                options: [], // no options
+                close: true,
+            });
+            let content = modal.content;
+            let entries = createElement(divString, content, 'b-entry.fr');
+            let renderBlockEntries = () => {
+                clearChildren(entries);
+                let block = bAll ? getBlockAll() : getBlockGall(gallId, gallName);
+                let splits = block[key].split('||');
+                for (let keyword of splits) {
+                    if (keyword == '') continue;
+                    let entry = createElement(divString, entries, 'entry.fr');
+                    createElement(spanString, entry, { [innerText]: '"' + keyword + '"' });
+                    let close = createElement('a', entry, {
+                        [onclick]: () => {
+                            removeBlock(block, key, keyword);
+                            if (bAll) updateBlockAll(block);
+                            else updateBlockGall(block, gallId);
+                            renderBlockEntries();
+                        }
+                    });
+                    createIcon(close, 'close', 'sml');
+                }
+            };
+            renderBlockEntries();
+            let wrap = createElement(divString, content, 'b-wrap.fr');
+            let input = createElement('input', wrap, 'nowrap');
+            let button = createElement('a', wrap, {
+                [onclick]: () => {
+                    if (!input.value) return;
+                    let block = bAll ? getBlockAll() : getBlockGall(gallId, gallName);
+                    addBlock(block, key, input.value);
+                    if (bAll) updateBlockAll(block);
+                    else updateBlockGall(block, gallId);
+                    renderBlockEntries();
+                    input.value = '';
+                }, [innerText]: str_add
+            }, 'sb');
+            enterAsClick(input, button, false, true);
+        }
+    }, 'opt.r');
+    let wrap = createElement(divString, option, 'label.fr');
+    // if (bAll) createIcon(wrap, 'globe');
+    createElement(spanString, wrap, { [innerText]: label });
+    createIcon(option, 'navigate_next', 'abs-r');
+}
+createElement(divString, optionsBlock, { [innerText]: str_blockAll }, 'opt.hr');
+createBlockOption(str_block_word, optionsBlock, true, 'word');
+createBlockOption(str_block_id, optionsBlock, true, 'id');
+createBlockOption(str_block_ip, optionsBlock, true, 'ip');
+createBlockOption(str_block_name, optionsBlock, true, 'nick');
+let blockGallLabel = createElement(divString, optionsBlock, { [innerText]: str_blockGall }, 'opt.hr');
+createBlockOption(str_block_word, optionsBlock, false, 'word');
+createBlockOption(str_block_id, optionsBlock, false, 'id');
+createBlockOption(str_block_ip, optionsBlock, false, 'ip');
+createBlockOption(str_block_name, optionsBlock, false, 'nick');
 
 // optionsWrite page
 createPageSelect(str_settings_write, optionsWrite);
@@ -3427,7 +3724,7 @@ let addZzal = createElement('a', optionsWrite, { [onclick]: () => uploadZzal.cli
 createIcon(addZzal, 'add_photo_alternate');
 createElement(spanString, addZzal, { [innerText]: str_uploadZzal });
 let useZzal = false;
-let optionUseZzal = createOption(str_settings_useZzal, () => {
+let optionUseZzal = createOption(str_settings_useZzal, null, () => {
     useZzal = true;
     if (zzal === null) return;
     removeClass(zzal.preview, hidden);
@@ -3467,8 +3764,8 @@ createElement(spanString, footerOption, { [innerText]: str_settings_footer }, 'l
 createIcon(footerOption, 'navigate_next', 'abs-r');
 
 // default: true
-createOption(str_settings_darkMode, () => removeClass(body, 'light'), () => addClass(body, 'light'), true);
-let madoOption = createOption(str_settings_mado, () => {
+createOption(str_settings_darkMode, 'dark_mode', () => removeClass(body, 'light'), () => addClass(body, 'light'), true);
+let madoOption = createOption(str_settings_mado, 'splitscreen', () => {
     bMado = true;
     if (bMobileDevice && !getOption('mado')) {
         openModal({
@@ -3500,10 +3797,10 @@ let madoOption = createOption(str_settings_mado, () => {
 
 createPageSelect(str_settings_chat, optionsChat);
 let useLinkInContent = true;
-createOption(str_settings_appendLink, () => useLinkInContent = true, () => useLinkInContent = false, true);
+createOption(str_settings_appendLink, null, () => useLinkInContent = true, () => useLinkInContent = false, true);
 
 // default: false
-createOption(str_settings_hideLogin, () => {
+createOption(str_settings_hideLogin, null, () => {
     addClass(loginInputContainer, hidden);
     addClass(loginInputExpander, hidden);
 }, () => {
@@ -3511,14 +3808,14 @@ createOption(str_settings_hideLogin, () => {
     removeClass(loginInputContainer, hidden);
     removeClass(loginInputExpander, hidden);
 });
-createOption(str_settings_lowLatency, () => setIntervalIndex(1), () => setIntervalIndex(0));
-createOption(str_settings_chatOnly, () => addClass(main, 'co'), () => removeClass(main, 'co'));
+createOption(str_settings_lowLatency, null, () => setIntervalIndex(1), () => setIntervalIndex(0));
+createOption(str_settings_chatOnly, null, () => addClass(main, 'co'), () => removeClass(main, 'co'));
 
 // page: chat
 // 닉네임 아이콘 표시
-createOption(str_settings_nikcon, () => removeClass(chatPage, 'hn'), () => addClass(chatPage, 'hn'), false, optionsChat);
+createOption(str_settings_nikcon, null, () => removeClass(chatPage, 'hn'), () => addClass(chatPage, 'hn'), false, optionsChat);
 // 반고닉 아이디 표시
-createOption(str_settings_showUnfixId, () => {
+createOption(str_settings_showUnfixId, null, () => {
     removeClass(chatPage, 'hu');
     pullDown(true);
 }, () => {
@@ -3527,13 +3824,13 @@ createOption(str_settings_showUnfixId, () => {
 }, true, optionsChat);
 // 댓글 수 하이라이트
 let countColorName = '--cc';
-createOptionProperty(str_settings_commentHighlight, countColorName, '#fc5', 'var(--cf)', true, optionsChat);
+createOptionProperty(str_settings_commentHighlight, null, countColorName, '#fc5', 'var(--cf)', true, optionsChat);
 // 부드러운 스크롤 애니메이션
 let scrollBehaviorName = '--sb';
-createOptionProperty(str_settings_smoothScroll, scrollBehaviorName, 'smooth', 'auto', true, optionsChat);
+createOptionProperty(str_settings_smoothScroll, null, scrollBehaviorName, 'smooth', 'auto', true, optionsChat);
 // 폰트 크기 확대
 let fontSizeName = '--fs';
-createOption(str_settings_bigFont, () => {
+createOption(str_settings_bigFont, null, () => {
     setDocStyleProp(fontSizeName, '15px');
     pullDown(true);
 }, () => {
@@ -3542,7 +3839,7 @@ createOption(str_settings_bigFont, () => {
 }, false, optionsChat);
 // 디시콘 크기 줄이기
 let dcconSizeName = '--ds';
-createOptionProperty(str_settings_smallDccon, dcconSizeName, '60px', '80px', false, optionsChat);
+createOptionProperty(str_settings_smallDccon, null, dcconSizeName, '60px', '80px', false, optionsChat);
 
 // footer
 createElement(spanString, settingsPanel, { [innerText]: 'version: ' + VERSION }, 'version');
@@ -3742,7 +4039,7 @@ let onPostData = async (postDatas, bForced = false) => {
     if (worker) worker.postMessage({ type: 'ln', n: lastNum });
 
     if (!bGreeted) { // greeting
-        newLine({title: str_greeting});
+        newLine({ title: str_greeting });
         bGreeted = true;
         if (bWriteUnavailable) newLine({ title: str_notifyChatDisabled });
     }
@@ -3807,12 +4104,10 @@ let genUpdateList = () => {
         try {
             text = text.replace(/(\n|\r|\t)/g, ''); // use replace instead of r due to worker compatibility
             let postDatas = [];
-            let matches = text.matchAll(/<tr[^>]*class="([^"]*us-post[^"]*)"[^>]*data-no="([^"]*)".+?<\/tr>/g);
+            let matches = text.matchAll(/<tr[^>]*class="[^"]*us-post[^"]*"[^>]*data-no="([^"]*)".+?<\/tr>/g);
             if (!matches) return;
             for (let match of matches) {
                 let post = match[0];
-                // 차단된 유저 건너뜀
-                if (match[1].includes('block-disable')) continue;
                 let postData = {
                     num: 0,
                     subject: '',
@@ -3825,7 +4120,7 @@ let genUpdateList = () => {
                     fix: false,
                     count: 0,
                 };
-                let num = _parse(match[2]);
+                let num = _parse(match[1]);
                 postData.num = num;
                 let reply = post.match(/<span[^>]*class="[^"]*reply_num[^>]*"[^>]*>\[([0-9]+)\]<\/span>/);
                 let lastCount = _postCommentCount[num] ?? 0; // worker support

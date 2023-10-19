@@ -217,6 +217,15 @@ a, span {
             height: 1.6em;
         }
     }
+
+    .b-entry {
+        width: 260px;
+        flex-wrap: wrap;
+        justify-content: baseline;
+        >.entry {
+            margin: 2px 4px;
+        }
+    }
 }
 
 .ctx {
@@ -499,6 +508,10 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
         // margin: 2px 0;
         justify-content: space-between;
         cursor: pointer;
+        .label>.icon {
+            font-size: 1em;
+            margin-right: .8em;
+        }
         .value {
             position: relative;
             height: 20px;
@@ -537,6 +550,9 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
             &:hover {
                 background: $colorBackgroundLight;
             }
+        }
+        &.hr {
+            font-weight: bold;
         }
     }
 }
@@ -806,7 +822,7 @@ img.nikcon {
     background: #555;
 } 
 
-.hidden, .grecaptcha-badge, .hn img.nikcon {
+.hidden, .grecaptcha-badge, .hn img.nikcon, .chl.block {
     display: none !important;
     visibility: collapse !important;
 }
@@ -837,6 +853,9 @@ $border: $colorBackgroundLight 1px solid;
 
 .icon {
     padding: 0;
+    &.sml {
+        font-size: 1em;
+    }
 }
 
 main {
