@@ -1,7 +1,7 @@
 $colorShadow: var(--cs);
-$colorBackgroundDarker: var(--cbdr);
+$colorBackgroundDarker: rgb(var(--cbdr));
 $colorBackgroundDark: rgb(var(--cbd));
-$colorBackground: var(--cb);
+$colorBackground: rgb(var(--cb));
 $colorBackgroundLight: rgb(var(--cbl));
 $colorBackgroundDark80: rgba(var(--cbd), .8);
 $colorBackgroundLight80: rgba(var(--cbl), .8);
@@ -18,6 +18,8 @@ $colorHighlight: #7e4ca0;
 $colorHighlightLight: #8c62a8;
 
 $colorWarning: #d42727;
+
+$shadowWidth: 2px;
 
 * {
     text-align: center;
@@ -56,13 +58,13 @@ html {
 body {
     // color
     --cs: black;
-    --cbdr: black;
-    --cbd: 13, 13, 14;
-    --cb: #1b1b1d;
+    --cbdr: 0, 0, 0; // #000000
+    --cbd: 13, 13, 14; // #0d0d0e
+    --cb: 27, 27, 29; // #1b1b1d
     --cbl: 51, 51, 51;
     --cfd: 165, 165, 165;
     --cf: 255, 255, 255;
-    --cbo: #0d0d0e;
+    --cbo: #0d0d0e; // #0d0d0e
 
     --f: ;
 
@@ -75,9 +77,9 @@ body {
 }
 .light {
     --cs: #383838;
-    --cbdr: rgb(255, 255, 255);
+    --cbdr: 255, 255, 255; // #ffffff
     --cbd: 232, 232, 232;
-    --cb: rgb(255, 255, 255);
+    --cb: 255, 255, 255; // #ffffff
     --cbl: 220, 220, 220;
     --cfd: 0, 0, 0;
     --cf: 13, 13, 14;
@@ -113,7 +115,7 @@ a {
 
 a, span {
     >span {
-        padding-top: .2em;
+        // padding-top: .2em;
     }
 }
 
@@ -178,7 +180,7 @@ a, span {
 }
 
 .modal {
-    box-shadow: $colorBackgroundDark 0 0 4px;
+    box-shadow: $colorBackgroundDark 0 0 $shadowWidth;
     background: $colorBackground;
     padding: 20px 30px;
     min-width: 200px;
@@ -194,9 +196,14 @@ a, span {
         padding: 0 10px;
         >a {
             margin: 0 4px;
+            >.progress {
+                animation: rotate-cw 1s infinite;
+                font-size: 1.6em;
+                padding: 0;
+            }
         }
     }
-    >textarea {
+    >textarea, >input {
         white-space: pre-wrap;
         height: 3.2em;
         margin: 18px;
@@ -206,8 +213,43 @@ a, span {
             margin-bottom: 0;
             color: rgb(var(--cfd));
         }
+        &.nowrap {
+            height: 1.6em;
+        }
+    }
+
+    .b-entry {
+        width: 260px;
+        flex-wrap: wrap;
+        justify-content: baseline;
+        >.entry {
+            margin: 2px 4px;
+        }
     }
 }
+
+.ctx {
+    z-index: 3 !important;
+    position: fixed;
+    padding: 4px 10px;
+    >.b {
+        width: 100%;
+        min-width: 8em;
+        margin: 0;
+        justify-content: flex-start;
+        >.icon {
+            font-size: 1em;
+            margin-right: .2em;
+        }
+    }
+    >hr {
+        width: 100%;
+        height: 1px;
+        background: $colorForegroundDark;
+        margin: 4px 0;
+    }
+}
+
 .footer-static {
     position: relative;
     border-radius: 0 0 4px 4px;
@@ -247,7 +289,7 @@ a, span {
         opacity: 0;
         transition: opacity .2s;
         padding: 2px 4px;
-        box-shadow: $colorShadow 0 0 4px;
+        box-shadow: $colorShadow 0 0 $shadowWidth;
         z-index: 1;
         font-weight: normal;
         white-space: nowrap;
@@ -262,8 +304,6 @@ a, span {
 
 .w {
     width: 100%;
-    background: $colorBackgroundLight;
-    border-radius: 0 0 4px 4px;
     transition: height .5s;
     overflow: hidden;
     margin-bottom: auto;
@@ -303,13 +343,13 @@ a, span {
         width: calc(100% - 10px);
         color: $colorForegroundDark;
         background: linear-gradient($colorBackground, transparent);
-        box-shadow: $colorBackground 0 -2px 4px;
+        box-shadow: $colorBackground 0 -2px $shadowWidth;
         >* {
             color: $colorForegroundDark;
         }
         &:hover {
             background: $colorBackgroundLight;
-            box-shadow: $colorBackground 0 0 4px;
+            box-shadow: $colorBackground 0 0 $shadowWidth;
         }
     }
     .cm {
@@ -323,7 +363,7 @@ a, span {
         display: flex;
         width: calc(100% - 10px);
         background: $colorBackground;
-        box-shadow: $colorBackground 0 0 4px;
+        box-shadow: $colorBackground 0 0 $shadowWidth;
         font-weight: bold;
         margin-top: 10px;
         &:hover {
@@ -468,6 +508,10 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
         // margin: 2px 0;
         justify-content: space-between;
         cursor: pointer;
+        .label>.icon {
+            font-size: 1em;
+            margin-right: .8em;
+        }
         .value {
             position: relative;
             height: 20px;
@@ -507,6 +551,9 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
                 background: $colorBackgroundLight;
             }
         }
+        &.hr {
+            font-weight: bold;
+        }
     }
 }
 
@@ -521,6 +568,7 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
 .chl {
     align-items: baseline;
     align-self: center;
+    border-radius: 4px;
     
     >.tt {
         cursor: pointer;
@@ -553,14 +601,10 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
 
     &.open {
         margin: .8em 1.5em;
-    }
-
-    &.open>.tt, >.tt:hover {
         background: $colorBackgroundLight;
     }
-
-    &.open>.tt {
-        border-radius: 4px 4px 0 0;
+    &:hover {
+        background: $colorBackgroundLight;
     }
 
     .ex.alt {
@@ -598,7 +642,7 @@ input, textarea, .b, .r, .p, .sb, .modal, .tooltip {
     }
     margin: .2em 0;
     margin-right: 3px;
-    box-shadow: $colorBackground 0 0 4px;
+    box-shadow: $colorBackground 0 0 $shadowWidth;
     justify-content: flex-start;
     align-self: flex-end;
     align-items: flex-start;
@@ -778,7 +822,7 @@ img.nikcon {
     background: #555;
 } 
 
-.hidden, .grecaptcha-badge {
+.hidden, .grecaptcha-badge, .hn img.nikcon, .chl.block {
     display: none !important;
     visibility: collapse !important;
 }
@@ -809,6 +853,9 @@ $border: $colorBackgroundLight 1px solid;
 
 .icon {
     padding: 0;
+    &.sml {
+        font-size: 1em;
+    }
 }
 
 main {
@@ -1000,7 +1047,6 @@ $inputHeight: 100px;
         font-weight: bold;
     }
     .help {
-        right: 0;
         position: absolute;
         >span {
             color: $colorBackgroundLight;
@@ -1275,7 +1321,7 @@ $previewImageSize: 140px;
     width: $previewSize;
     margin: $previewMargin;
     padding: 0;
-    box-shadow: $colorBackgroundDark 0 0 4px;
+    box-shadow: $colorBackgroundDark 0 0 $shadowWidth;
     >.image {
         position: relative;
         height: $previewImageSize;
@@ -1309,7 +1355,7 @@ $previewImageSize: 140px;
     >.close {
         margin: -4px;
         background: $colorBackground;
-        box-shadow: $colorBackgroundDark 0 0 4px;
+        box-shadow: $colorBackgroundDark 0 0 $shadowWidth;
         &:hover {
             background: $colorBackgroundLight;
         }
@@ -1528,5 +1574,26 @@ $previewImageSize: 140px;
     }
     100% {
         opacity: 1;
+    }
+}
+
+.rotate-ccw-half {
+    animation: rotate-ccw-half .8s;
+}
+
+@keyframes rotate-ccw-half {
+    0% {
+        rotate: 180deg;
+    }
+    100% {
+        rotate: 0deg;
+    }
+}
+@keyframes rotate-cw {
+    0% {
+        rotate: 0deg;
+    }
+    100% {
+        rotate: 360deg;
     }
 }
