@@ -4,18 +4,7 @@
  */
 (async() => {
 /**
- * ** deprecated **
- * NOTE: 용량 최적화
- * 
- * 최종 빌드 결과물이 지나지게 길어지지 않도록 주의할 것
- * 대부분의 브라우저에서는 64KB 제한이 있음
- * ** deprecated **
- */
-
-/**
  * NOTE: 빌드된 코드를 웹에서 로드하도록 변경 - 2.0.0-20230125
- * 일부 모바일 브라우저에서는
- * 긴 코드를 화면에 표시하는 데에만 어려움이 있었음
  *
  * 모든 코드를 인라인으로 만들겠다는 고집을 버리고
  * 2.x 버전부터는 전부 웹상(Github Pages)에서
@@ -36,35 +25,6 @@ function decode(encoded) {
     for (let i = 0; i < bytes.length; i++) { bytes[i] = binary.charCodeAt(i); }
     return decoder.decode(bytes);
 }
-
-/**
- * NOTE: 특수문자 처리
- * 
- * 한글과 같은 문자가 URL 퍼센트 인코딩을 거치면 길이가 급격하게 늘어남
- * 예) "라이브챗" > "%EB%9D%BC%EC%9D%B4%EB%B8%8C%EC%B1%9"
- * 
- * 따라서 이러한 문자열을 미리 Base64 URL 인코딩 후
- * 로드 시 역순으로 변환하는 과정을 거치는 것으로 문제를 회피
- * 
- * 기존 Base64 URL 인코딩에서 쓰이는 "=" 기호 역시
- * URL 인코딩 시 이스케이프되므로 "."으로 대체했음
- */
-
-/**
- * NOTE: 중복 Base64 인코딩 적용 - 1.5.0-20230120
- * 
- * 공백문자, 이퀄 기호, 중괄호 등 대부분의 특수문자가 전부 퍼센트 인코딩되면서
- * 결국 전체 코드를 Base64 인코딩 하는 것이
- * (전체 코드가 ascii에서 표현 가능한 문자로만 이루어졌다는 가정 하에)
- * 최종적인 결과물로 놓고봤을 때 더 적절하다는 것을 확인했음
- * 
- * 따라서 상기한 특수문자 처리 방식은 인코딩이 중복되어
- * 하나마나 한 정도로 길이가 늘어나는 문제가 있음
- * 
- * 하지만 디버깅을 위해 UTF-8 인코딩된 버전을 자주 사용했고
- * 돌려놓기에는 너무 양이 많았던 관계로
- * 상기 방식을 유지하기로 함
- */
 
 /** "DC 라이브챗" */
 let str_dclivechat = decode('REMg65287J2067iM7LGX');
@@ -279,8 +239,8 @@ let str_add = decode('7LaU6rCA');
 /** "차단 설정" */
 let str_settings_block = decode('7LCo64uoIOyEpOyglQ..');
 
-/** "차단 설정 등이 추가되었습니다!" */
-let str_features = decode('7LCo64uoIOyEpOyglSDrk7HsnbQg7LaU6rCA65CY7JeI7Iq164uI64ukIQ..');
+/** "이제 글을 오른쪽 클릭하면\n다음 메뉴를 사용할 수 있습니다!" */
+let str_features = decode('7J207KCcIOq4gOydhCDsmKTrpbjsqr0g7YG066at7ZWY66m0CuuLpOydjCDrqZTribTrpbwg7IKs7Jqp7ZWgIOyImCDsnojsirXri4jri6Qh');
 
 //#endregion
 
@@ -474,12 +434,30 @@ let randomInt = (start, end) => {
     let num = Math.random() * range;
     return Math.min(start + Math.floor(num), end);
 };
+/*
 let escapeHtml = (unsafe) => {
     return unsafe
-        .r(/&/g, "&amp;")
-        .r(/</g, "&lt;")
-        .r(/>/g, "&gt;");
+        // .r(/&/g, "&amp;")
+        // .r(/</g, "&lt;")
+        // .r(/>/g, "&gt;");
+        .r(/&/g, '&amp;')
+        .r(/#/g, '&#035;')
+        .r(/'/g, '&#039;')
+        .r(/</g, '&lt;')
+        .r(/>/g, '&gt;')
+        .r(/"/g, '&quot;');
 };
+*/
+let unescapeEmoji = (string) => {
+    // emoji support
+    let matches = string.matchAll(/&#x([0-9a-fA-F]+);/g);
+    for (let match of matches) {
+        let emoji = String.fromCodePoint('0x' + match[1]);
+        string = string.replace(match[0], emoji);
+    }
+    return string;
+}
+
 let trimHtml = (string) => {
     return string
         .r(/(\r|\t)/g, '')
@@ -564,17 +542,17 @@ let executeCaptcha = async (version, data, action) => {
     debug('recaptcha', version, 'is not supported');
 };
 
-let postCaptcha = async (func, params, data, action) => {
+let useCaptcha = async (func, params, data, action) => {
     let tryMax = 1;
     let tryNum = 0;
     let res;
     let tryPost = async () => {
-        tryNum += 1;
         if (tryNum > tryMax) return res;
+        tryNum += 1;
         res = await func(...params, data);
         if (!res) return falseString(str_error_badRequest);
         let splits = split(res);
-        if (splits[0] == false) {
+        if (splits[0] == 'false') {
             if (splits.length == 1) return falseString(res);
             if (splits[1] == 'captcha') {
                 await executeCaptcha(splits[2], data, action);
@@ -709,8 +687,7 @@ let rc1 = (s) => {
     return s.r(/^./, fi);
 }
 let getSecretString = (html) => {
-    let escaped = escapeHtml(html);
-    let r = escaped.match(/var _r = _d\('([A-Za-z0-9+=\/]+)'\)/);
+    let r = html.match(/var _r = _d\('([A-Za-z0-9+=\/]+)'\)/);
     if (!r) return '';
     return _d(r[1]);
 }
@@ -921,15 +898,11 @@ let postWrite = async (url, ...datas) => {
 let postDelete = async (num, password = '') => {
     let html = await getAsText(getDeleteUrl(num));
     if (!html) return falseString('not available');
-    // let form = html.match(/<form[^>]+name="delete".+?<\/form>/);
-    // if (!form) return falseString('no form');
-    // form = form[0];
     let data = {
         [grecaptchaResponse]: '',
         _GALLTYPE_: gallType,
     };
     if (!getFormData(html, 'delete', data)) return falseString('no form');
-    // updateFormDataV3(form, data);
     let secret = getSecretString(html);
     if (!secret) return falseString('no secret');
     data.service_code = getSecondServiceCode(data.service_code, secret);
@@ -943,17 +916,7 @@ let postDelete = async (num, password = '') => {
         let dcc_key_v1 = html.match(new RegExp(`<input[^>]+id=["']${match[1]}["'][^>]*>`));
         if (dcc_key_v1) data.dcc_key_v1 = getAttribute(dcc_key_v1[0], match[2]);
     }
-    return await postWriteCaptcha(postWrite, [ password ? deletePasswordSubmit : deleteSubmit ], data, 'delete_submit');
-    // let res = await postWrite(password ? deletePasswordSubmit : deleteSubmit, data);
-    // if (!res) return falseString(str_error_badRequest);
-    // let splits = res.split('||');
-    // if (splits.length > 2 && splits[1] == 'captcha') {
-    //     await executeCaptcha(splits[2], data, 'delete_submit');
-    //     res = await postWrite(password ? deletePasswordSubmit : deleteSubmit, data);
-    //     splits = res.split('||');
-    // }
-    // if (splits.length == 1 && splits[0] != 'true') return falseString(res);
-    // return res;
+    return await useCaptcha(postWrite, [ password ? deletePasswordSubmit : deleteSubmit ], data, 'delete_submit');
 }
 // 댓글 쓰기
 let postComment = async (num, url, ...datas) => {
@@ -963,7 +926,8 @@ let postComment = async (num, url, ...datas) => {
         referrer: getPostUrl(num),
     }
     return postAsText(url, options, body).catch(debug);
-}
+};
+
 let postDeleteComment = async (commentNum, { num, id, value, vCurT }, password = '') => {
     let data = {
         ci_t: getCookie('ci_c'),
@@ -979,18 +943,9 @@ let postDeleteComment = async (commentNum, { num, id, value, vCurT }, password =
         data.re_password = password;
         data.v_cur_t = vCurT;
     }
-    postCaptcha(postComment, [ commentNum, commentDeleteSubmit ], data, 'comment_delete_submit');
-    let res = await postComment(commentNum, commentDeleteSubmit, data).catch(debug);
-    if (!res) return falseString(str_error_badRequest);
-    let splits = res.split('||');
-    if (splits.length > 2 && splits[1] == 'captcha') {
-        await executeCaptcha(splits[2], data, 'comment_delete_submit');
-        res = await postComment(commentNum, commentDeleteSubmit, data).catch(debug);
-        splits = res.split('||');
-    }
-    if (splits.length == 1 && splits[0] != 'true') return falseString(res);
-    return res;
-}
+    return await useCaptcha(postComment, [ commentNum, commentDeleteSubmit ], data, 'comment_delete_submit');
+};
+
 // 디시콘 패키지 정보 얻기
 let postDcconPackageDetail = async (code) => {
     let url = host + 'dccon/package_detail';
@@ -1240,14 +1195,7 @@ let insertDccon = async (dccon) => {
         check_8: undefined,
         _GALLTYPE_: gallType,
     };
-    let res = await postWrite(dcconInsertIcon, data);
-    if (res) {
-        let splits = res.split('||');
-        if (splits.length > 2 && splits[1] == 'captcha') {
-            await executeCaptcha(splits[2], data, 'insert_icon');
-            await postWrite(dcconInsertIcon, data);
-        }
-    }
+    await useCaptcha(postWrite, [ dcconInsertIcon ], data, 'insert_icon');
     populatePackage('recent').catch(debug);
 }
 let insertDcconComment = async (dccon, num) => {
@@ -1360,7 +1308,7 @@ let replaceImage = (string, id) => {
             replaced = replaced.r('>', '') + ' class="img">';
         }
 
-        let clickMatch = imageMatch.match(/onclick="[^"]+no=([0-9a-zA-Z]+)[^"]*"/);
+        let clickMatch = imageMatch.match(/on[Cc]lick="[^"]+no=([0-9a-zA-Z]+)[^"]*"/);
         if (clickMatch) {
             // if there is onclick func ... it means it has original image
             replaced = replaced.r(clickMatch[0], `onclick="window.postMessage(JSON.stringify({type:'${onImageClickFuncName}',src:'${ getDownloadUrl(clickMatch[1]) }',id:'${ id }'}))" data-osrc="${ getDownloadUrl(clickMatch[1]) }"`);
@@ -1408,7 +1356,7 @@ let updateFormDataV3 = (text, data) => {
     for (let match of matches) {
         data[match[1]] = match[2];
     }
-}
+};
 
 //#endregion
 
@@ -1526,7 +1474,7 @@ let isBlocked = (postData, blockData) => {
 }
 let _isBlocked = (postData, key, blockData, id, include = false) => {
     if (!blockData[id]) return false;
-    let splits = blockData[id].split('||');
+    let splits = split(blockData[id]);
     for (let split of splits) {
         if (include) {
             if (postData[key].includes(split)) return true;
@@ -1553,12 +1501,12 @@ let updateBlockGall = (o, id) => {
     }
 }
 let addBlock = (o, key, keyword) => {
-    let splits = o[key].split('||').filter(t => t != '');
+    let splits = split(o[key]).filter(t => t != '');
     if (!splits.includes(keyword)) splits.push(keyword);
     o[key] = splits.join('||');
 }
 let removeBlock = (o, key, keyword) => {
-    let splits = o[key].split('||').filter(t => t != '');
+    let splits = split(o[key]).filter(t => t != '');
     for (let i = 0; i < splits.length; i++) {
         let split = splits[i];
         if (split == keyword) {
@@ -1809,32 +1757,34 @@ let addTooltip = (element, { text, top = false }, ...classes) => {
     return tooltip;
 };
 
-let context;
-let addContext = (element, options = []) => {
+let contextmenu;
+let addContextMenu = (element, options = []) => {
     element.oncontextmenu = (ev) => {
         ev.preventDefault();
         let x = ev.clientX;
         let y = ev.clientY;
-        if (context) context.remove();
-        context = createElement(divString, body, 'p.ctx');
-        context.style.left = x + 'px';
-        context.style.top = y + 'px';
+        if (contextmenu) contextmenu.remove();
+        contextmenu = createElement(divString, body, 'p.ctx');
+        contextmenu.style.left = x + 'px';
+        contextmenu.style.top = y + 'px';
     
         for (option of options) {
             if (option.hr) {
-                createElement('hr', context);
+                createElement('hr', contextmenu);
                 continue;
             }
-            let entry = createElement('a', context, 'fr.b');
+            let entry = createElement('a', contextmenu, 'fr.b');
             if (option.icon) createIcon(entry, option.icon);
             if (option.text) createElement(spanString, entry, { [innerText]: option.text });
             if (option[onclick]) entry[onclick] = option[onclick];
         }
+
+        return contextmenu;
     }
 };
 doc.addEventListener('click', () => {
-    if (context) context.remove();
-    context = null;
+    if (contextmenu) contextmenu.remove();
+    contextmenu = null;
 });
 
 let main = createElement('main', body);
@@ -2047,7 +1997,9 @@ let onImageError = (videoId) => {
 };
 
 onmessage = (ev) => {
-    let json = JSON.parse(ev.data);
+    let json;
+    if (typeof ev.data == 'object') json = ev.data;
+    else json = JSON.parse(ev.data);
     if (json) {
         if (json.type == onImageErrorFuncName) onImageError(json.id);
         else if (json.type == openLinkFuncName) openLink(json.url);
@@ -2417,7 +2369,7 @@ let newLine = async (postData) => {
     let inline = createElement(spanString, titleDiv);
     let name = postData.nickname;
     let ip = postData.ip;
-    let title = postData.title;
+    let title = unescapeEmoji(decodeURIComponent(postData.title));
     let id = postData.id;
     let img = postData.img;
     let fix = postData.fix;
@@ -2686,7 +2638,7 @@ let newLine = async (postData) => {
                         openAlert(str_error_generic);
                     }
                 }];
-                if (my || ip || myComment || comment.ip || comment.id == userId) addContext(commentEntry, contextOptions);
+                if (my || ip || myComment || comment.ip || comment.id == userId) addContextMenu(commentEntry, contextOptions);
             }
             checkAnyMore();
             pullDown(true);
@@ -2790,13 +2742,13 @@ let newLine = async (postData) => {
                         if (ip) { // 유동 삭제
                             let { r, p } = initPromise();
                             let pwModal = openModal({
-                                title: 'password',
+                                title: str_password,
                                 input: password,
                                 nowrap: true,
                                 options: [{
                                     text: str_confirm,
                                     enter: true,
-                                    [onclick]: (_close) => {
+                                    [onclick]: (_close, _wait) => {
                                         password = pwModal.input.value;
                                         if (password.length < 2) return openAlert(str_shortPassword);
                                         r(true);
@@ -2942,8 +2894,8 @@ let newLine = async (postData) => {
         }
     }
     if (contextOptions.length) {
-        addContext(titleDiv, contextOptions);
-        addContext(postContentVp, contextOptions);
+        addContextMenu(titleDiv, contextOptions);
+        addContextMenu(postContentVp, contextOptions);
     }
 };
 
@@ -4088,7 +4040,10 @@ let genUpdateList = () => {
         _url = _URL;
         _getAsText = _TEXT;
         _postCommentCount = {};
-        _onChange = (n, c) => self.postMessage({type:'cc',n,c});
+        _onChange = (n, c) => {
+            _postCommentCount[n] = c;
+            self.postMessage({type:'cc',n,c});
+        };
         _onPostData = async (d) => self.postMessage({type:'pd',d});
         _getInnerText = _IT;
         _getInnerHtml = _IH;
@@ -4191,7 +4146,7 @@ let genUpdateList = () => {
             }
             await _onPostData(postDatas);
         } catch (e) {
-            _debug('here', e);
+            _debug(e);
         }
     }
     return { _UL: updateList };
@@ -4452,30 +4407,20 @@ let writePost = async (title, content) => {
     }
 
     lastData.memo = encode(imageContent + linkContent + str_lineBreak + dcconContent + content);
-    let res = await postWrite(articleSubmit, formData, additionalFormData, lastData).catch(debug);
-    if (res) {
-        let splits = res.split('||');
-        if (splits.length > 2 && splits[1] == 'captcha') {
-            await executeCaptcha(splits[2], lastData, 'comment_submit');
-            return await postWrite(articleSubmit, formData, additionalFormData, lastData).catch(debug);
-        }
-    }
-    return res;
-}
+    return await useCaptcha(postWrite, [ articleSubmit, formData, additionalFormData ], lastData, 'comment_submit');
+};
 
 // 글 작성 이후
 let onWritePost = (res) => {
     timeout(refreshWriteSession, 500);
-    let splits = res.split('||');
-    if (splits.length < 2) {
+    let splits = split(res);
+    if (splits.length == 1) {
         debug(res);
-        openAlert(str_error_generic);
-        return;
+        return openAlert(str_error_generic);
     }
     if (splits[0] == 'false') {
         openAlert(splits[1]);
-        debug(res);
-        return;
+        return debug(res);
     }
     let num = parse(splits[1].trim());
     myPosts.push(num);
@@ -4484,7 +4429,7 @@ let onWritePost = (res) => {
         nickname: getNicknameV2(),
         id: bLogin ? userId : '',
         ip: bLogin ? '' : cutIpAddress(formData.user_ip),
-        title: decodeURIComponent(formData.subject),
+        title: formData.subject,
         img: userImg,
         fix: bUserFix,
         my: true,
@@ -4495,10 +4440,12 @@ let onWritePost = (res) => {
     }
     files.length = 0;
     toggleUploadPanel(false);
-}
+};
+
+// 댓글 작성 이후
 let onWriteComment = (res, num) => {
     timeout(renderInputCaptcha, 500);
-    let splits = res.split('||');
+    let splits = split(res);
     if (splits.length < 2)  {
         debug(res);
         return openAlert(str_error_generic);
@@ -4509,8 +4456,7 @@ let onWriteComment = (res, num) => {
     }
     setTarget(0);
     onPostCommentCountChanged[num](-1, true);
-    return true;
-}
+};
 
 // 댓글 쓰기
 let writeComment = async (num, body, target = 0) => {
@@ -4549,20 +4495,14 @@ let writeComment = async (num, body, target = 0) => {
         _GALLTYPE_: gallType,
         headTail: '""',
     };
-    let res = await postComment(num, commentSubmit, data, commentFormData, additionalFormData).catch(debug);
-    if (!res) return falseString(str_error_badRequest);
-    let splits = res.split('||');
-    if (splits.length > 2 && splits[1] == 'captcha') {
-        await executeCaptcha(splits[2], data, 'comment_submit');
-        res = await postComment(num, commentSubmit, data, commentFormData, additionalFormData).catch(debug);
-    }
+    let res = await useCaptcha(postComment, [ num, commentSubmit, commentFormData, additionalFormData ], data, 'comment_submit');
     try {
         let number = parse(res);
         if (number) return 'true||' + number;
-        else return res;
     } catch {
-        return res;
+        debug(res);
     }
+    return res;
 }
 
 submit.onclick = async() => {
@@ -4639,11 +4579,35 @@ if (typeof VERSION !== 'undefined') {
     let oldVersionMajor = getMajor(lastVersion);
     let versionMajor = getMajor(VERSION);
     if (oldVersionMajor !== versionMajor) {
-        openModal({
+        let modal = openModal({
             title: str_update + ': ' + VERSION,
-            desc: str_features + '<a href="https://joh1ah.github.io/dclivechat/change.log" target="_blank">' + str_changelog + '</a>',
-            html: true,
+            // desc: str_features + '<a href="https://joh1ah.github.io/dclivechat/change.log" target="_blank">' + str_changelog + '</a>',
+            desc: str_features,
+            // html: true,
         });
+        addContextMenu(modal.content, [{
+            text: str_delete,
+            icon: 'delete',
+        }, {
+            hr: true,
+        }, {
+            text: str_openInNew,
+            icon: 'open_in_new',
+        }, {
+            text: str_copyUrl,
+        }, {
+            hr: true
+        }, {
+            text: str_block_id,
+        }, {
+            text: str_block_name,
+        }]);
+        let sample = modal.content.oncontextmenu({ preventDefault: () => {}, clientX: 0, clientY: 0 });
+        contextmenu = null;
+        detach(sample);
+        modal.content.appendChild(sample);
+        sample.style.position = 'relative';
+        sample.style.marginTop = '1em';
     }
 }
 applyOption('version', VERSION);
