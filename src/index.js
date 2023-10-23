@@ -248,8 +248,6 @@ let str_uploadImage = decode('7J2066-47KeAIOyXheuhnOuTnA..');
 let str_uploadZzal = decode('7J6Q64-Z7Kek67CpIOyXheuhnOuTnA..');
 /** "버전 업데이트됨" */
 let str_update = decode('67KE7KCEIOyXheuNsOydtO2KuOuQqA..');
-/** "자동짤방과 꼬리말 기능을 추가했습니다!" */
-let str_features = decode('7J6Q64-Z7Kek67Cp6rO8IOq8rOumrOunkCDquLDriqXsnYQg7LaU6rCA7ZaI7Iq164uI64ukIQ..');
 /** "전체 변경사항 보기" */
 let str_changelog = decode('7KCE7LK0IOuzgOqyveyCrO2VrSDrs7TquLA.');
 /** "구매하지 않은 디시콘입니다." */
@@ -281,6 +279,9 @@ let str_add = decode('7LaU6rCA');
 /** "차단 설정" */
 let str_settings_block = decode('7LCo64uoIOyEpOyglQ..');
 
+/** "차단 설정 등이 추가되었습니다!" */
+let str_features = decode('7LCo64uoIOyEpOyglSDrk7HsnbQg7LaU6rCA65CY7JeI7Iq164uI64ukIQ..');
+
 //#endregion
 
 //#region 전역 상수
@@ -295,7 +296,7 @@ let bClipboardReadAvailable = window.navigator.clipboard.read && true;
 let bMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 let bMobileSafari = bMobileDevice && /Safari/i.test(navigator.userAgent);
 
-let intervalPresets = [ 5000, 3000 ];
+let intervalPresets = [ 5000, 3000, 1000 ];
 let minInterval = 2000; 
 let maxPost = 80;
 let maxCommentOnPage = 20;
@@ -341,7 +342,7 @@ let newRegex = (string, g = true) => {
     string = string.r('?', '\\?');
     if (g) return new RegExp(string, 'g');
     return new RegExp(string);
-}
+};
 
 // 자주 쓰이는 정규식
 let regexDccon = /:([^,:]+), ([^,:]+):/g; // regexDccon
@@ -514,7 +515,9 @@ let randomBlanks = (count) => {
         output += blanks[randomInt(0, blanks.length - 1)];
     }
     return output;
-}
+};
+
+let split = (string) => string.split('||');
 
 // Document
 let getCookie = (cookieName) => {
@@ -561,6 +564,28 @@ let executeCaptcha = async (version, data, action) => {
     debug('recaptcha', version, 'is not supported');
 };
 
+let postCaptcha = async (func, params, data, action) => {
+    let tryMax = 1;
+    let tryNum = 0;
+    let res;
+    let tryPost = async () => {
+        tryNum += 1;
+        if (tryNum > tryMax) return res;
+        res = await func(...params, data);
+        if (!res) return falseString(str_error_badRequest);
+        let splits = split(res);
+        if (splits[0] == false) {
+            if (splits.length == 1) return falseString(res);
+            if (splits[1] == 'captcha') {
+                await executeCaptcha(splits[2], data, action);
+                return await tryPost();
+            }
+        }
+        return res;
+    };
+    return await tryPost();
+};
+
 let bytesKb = 1024;
 let bytesUnits = 'B.KB.MB.GB.TB.PB'.split('.');
 let bytes = (size) => {
@@ -582,19 +607,6 @@ let bytes = (size) => {
         unitIndex++;
     }
 };
-
-let parseHtml = (text) => {
-    try {
-        let temp = createElement('div', null, { innerHTML: text.r('<html', '<document').r('</html>', '</document>') });
-        let doc = temp[getElementsByTagName]('document')[0];
-        detach(doc);
-        temp.remove();
-        return doc;
-    } catch (e) {
-        debug(e);
-        return null;
-    }
-}
 
 // UI
 let createElement = (tagName, parent, attr, ...classes) => {
@@ -850,7 +862,15 @@ let getValueById = (text, id) => {
     let match = text.match(regex);
     if (!match) return '';
     return match[2];
-}
+};
+
+let getFormData = (text, id, data) => {
+    let regex = new RegExp(`<form[^>]+id=["']${id}["'][^>]*>.*?<\/form>`);
+    let match = text.match(regex);
+    if (!match) return false;
+    updateFormDataV3(match[0], data);
+    return true;
+};
 
 //#endregion
 
@@ -901,14 +921,15 @@ let postWrite = async (url, ...datas) => {
 let postDelete = async (num, password = '') => {
     let html = await getAsText(getDeleteUrl(num));
     if (!html) return falseString('not available');
-    let form = html.match(/<form[^>]+name="delete".+?<\/form>/);
-    if (!form) return falseString('no form');
-    form = form[0];
+    // let form = html.match(/<form[^>]+name="delete".+?<\/form>/);
+    // if (!form) return falseString('no form');
+    // form = form[0];
     let data = {
         [grecaptchaResponse]: '',
         _GALLTYPE_: gallType,
     };
-    updateFormDataV3(form, data);
+    if (!getFormData(html, 'delete', data)) return falseString('no form');
+    // updateFormDataV3(form, data);
     let secret = getSecretString(html);
     if (!secret) return falseString('no secret');
     data.service_code = getSecondServiceCode(data.service_code, secret);
@@ -922,16 +943,17 @@ let postDelete = async (num, password = '') => {
         let dcc_key_v1 = html.match(new RegExp(`<input[^>]+id=["']${match[1]}["'][^>]*>`));
         if (dcc_key_v1) data.dcc_key_v1 = getAttribute(dcc_key_v1[0], match[2]);
     }
-    let res = await postWrite(password ? deletePasswordSubmit : deleteSubmit, data);
-    if (!res) return falseString(str_error_badRequest);
-    let splits = res.split('||');
-    if (splits.length > 2 && splits[1] == 'captcha') {
-        await executeCaptcha(splits[2], data, 'delete_submit');
-        res = await postWrite(password ? deletePasswordSubmit : deleteSubmit, data);
-        splits = res.split('||');
-    }
-    if (splits.length == 1 && splits[0] != 'true') return falseString(res);
-    return res;
+    return await postWriteCaptcha(postWrite, [ password ? deletePasswordSubmit : deleteSubmit ], data, 'delete_submit');
+    // let res = await postWrite(password ? deletePasswordSubmit : deleteSubmit, data);
+    // if (!res) return falseString(str_error_badRequest);
+    // let splits = res.split('||');
+    // if (splits.length > 2 && splits[1] == 'captcha') {
+    //     await executeCaptcha(splits[2], data, 'delete_submit');
+    //     res = await postWrite(password ? deletePasswordSubmit : deleteSubmit, data);
+    //     splits = res.split('||');
+    // }
+    // if (splits.length == 1 && splits[0] != 'true') return falseString(res);
+    // return res;
 }
 // 댓글 쓰기
 let postComment = async (num, url, ...datas) => {
@@ -942,7 +964,7 @@ let postComment = async (num, url, ...datas) => {
     }
     return postAsText(url, options, body).catch(debug);
 }
-let postDeleteComment = async (commentNum, { num, id, value ,vCurT }, password = '') => {
+let postDeleteComment = async (commentNum, { num, id, value, vCurT }, password = '') => {
     let data = {
         ci_t: getCookie('ci_c'),
         id: gallId,
@@ -957,6 +979,7 @@ let postDeleteComment = async (commentNum, { num, id, value ,vCurT }, password =
         data.re_password = password;
         data.v_cur_t = vCurT;
     }
+    postCaptcha(postComment, [ commentNum, commentDeleteSubmit ], data, 'comment_delete_submit');
     let res = await postComment(commentNum, commentDeleteSubmit, data).catch(debug);
     if (!res) return falseString(str_error_badRequest);
     let splits = res.split('||');
@@ -1380,7 +1403,7 @@ let updateFormDataV2 = (text, data) => {
     if (formData.r_key) rKey = formData.r_key;
 };
 let updateFormDataV3 = (text, data) => {
-    let matches = text.matchAll(/<input[^>]+name=["']([^"']+)["'][^>]+value=["']([^"']+)["']/g);
+    let matches = text.matchAll(/<input[^>]+name=["']([^"']+)["'][^>]+value=["']([^"']*)["']/g);
     if (!matches) return;
     for (let match of matches) {
         data[match[1]] = match[2];
@@ -3181,7 +3204,7 @@ let createPackagePage = (package) => {
             src: getDcconUrlFromCode(code),
             [onclick]: async () => {
                 let _dccon = await loadDcconDetail(code); // since package title could be 'latest'
-                debug(pTitle, title, _dccon);
+                if (DEBUG) debug(pTitle, title, _dccon);
                 if (isPostingWrite()) {
                     insertDccon(_dccon);
                     let _packageTitle = packageTitle;
@@ -3889,6 +3912,7 @@ let getPostContent = async (num, bForce = false) => {
         delId: '',
         delValue: '',
         vCurT: '',
+        // recomFormData : null,
     };
     let text = await getAsText(getPostUrl(num)).catch(debug);
 
@@ -3912,10 +3936,12 @@ let getPostContent = async (num, bForce = false) => {
     contentData.string = getSecretString(text);
     postContentDatas[num] = contentData;
     // _cmt_del_form_
-    let delKey = text.match(/<form[^>]+id=["']_cmt_del_form_["'][^>]*>.*?<input[^>]+name=["']([^"']+)["'][^>]+value=["']([^"']+)["']/);
-    if (delKey) {
-        contentData.delId = delKey[1];
-        contentData.delValue = delKey[2];
+    let data = {};
+    if(getFormData(text, '_cmt_del_form_', data)) {
+        for (let key in data) {
+            contentData.delId = key;
+            contentData.delValue = data[key];
+        }
     }
     let vCurT = getValueById(text, 'v_cur_t');
     if (vCurT) contentData.vCurT = vCurT;
@@ -3936,6 +3962,10 @@ let getPostContent = async (num, bForce = false) => {
     updateFormDataV2(text, commentFormData);
     commentFormData.service_code = getSecondServiceCode(commentFormData.service_code, contentData.string);
     commentFormDatas[num] = commentFormData;
+
+    //TODO 개념글 추천
+    // let recomFormData = {};
+    // if (getFormData(text, '_view_form_', recomFormData)) contentData.recomFormData = recomFormData;
 
     return returnFunc();
 }
@@ -4590,7 +4620,7 @@ submit.onclick = async() => {
         onWriteComment(await writeComment(targetPostNum, title + lastSigniture, targetCommentNum).catch(debug), targetPostNum);
     }
     if (bMobileDevice) input.focus();
-}
+} 
 
 //#endregion
 
