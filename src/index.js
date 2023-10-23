@@ -239,8 +239,8 @@ let str_add = decode('7LaU6rCA');
 /** "차단 설정" */
 let str_settings_block = decode('7LCo64uoIOyEpOyglQ..');
 
-/** "이제 글을 오른쪽 클릭하면\n다음 메뉴를 사용할 수 있습니다!" */
-let str_features = decode('7J207KCcIOq4gOydhCDsmKTrpbjsqr0g7YG066at7ZWY66m0CuuLpOydjCDrqZTribTrpbwg7IKs7Jqp7ZWgIOyImCDsnojsirXri4jri6Qh');
+/** "이제 글을 오른쪽 클릭하면<br>다음 메뉴를 사용할 수 있습니다!" */
+let str_features = decode('7J207KCcIOq4gOydhCDsmKTrpbjsqr0g7YG066at7ZWY66m0PGJyPuuLpOydjCDrqZTribTrpbwg7IKs7Jqp7ZWgIOyImCDsnojsirXri4jri6Qh');
 
 //#endregion
 
@@ -1441,7 +1441,7 @@ let clearSaveData = () => saveOptions({});
 let getBlockAll = () => {
     let json = storage?.getItem('block_all');
     if (!json) return {
-        on: 0,
+        on: 1,
         word: '',
         id: '',
         nick: '',
@@ -1455,7 +1455,7 @@ let getBlockParts = () => {
     return JSON.parse(json);
 };
 let getBlockGall = (id, name) => getBlockParts()[id] ?? {
-    on: 0,
+    on: 1,
     word: '',
     id: '',
     nick: '',
@@ -1485,6 +1485,7 @@ let _isBlocked = (postData, key, blockData, id, include = false) => {
     return false;
 };
 let updateBlockAll = (o) => {
+    o.on = 1;
     setBlockAll(o);
     for (let line of chatLines) {
         if (isBlocked(line, o)) addClass(line.chat, 'block');
@@ -1492,6 +1493,7 @@ let updateBlockAll = (o) => {
     }
 }
 let updateBlockGall = (o, id) => {
+    o.on = 1;
     let blockParts = getBlockParts();
     blockParts[id] = o;
     setBlockParts(blockParts);
@@ -4581,9 +4583,8 @@ if (typeof VERSION !== 'undefined') {
     if (oldVersionMajor !== versionMajor) {
         let modal = openModal({
             title: str_update + ': ' + VERSION,
-            // desc: str_features + '<a href="https://joh1ah.github.io/dclivechat/change.log" target="_blank">' + str_changelog + '</a>',
-            desc: str_features,
-            // html: true,
+            desc: str_features + '<a href="https://joh1ah.github.io/dclivechat/change.log" target="_blank">' + str_changelog + '</a>',
+            html: true,
         });
         addContextMenu(modal.content, [{
             text: str_delete,

@@ -56,7 +56,6 @@ javascript:(()=>{fetch('https://joh1ah.github.io/dclivechat/min.js').then(res=>r
 
 ## Changelog
 v2.3.0-20231023
-* 개념글 추천/비추천 및 신고 기능 추가
 * 글/댓글 삭제 기능 추가
 * 키워드/ID/IP/닉네임 차단 기능 추가
 * 이미지 붙여넣기 업로드 지원
