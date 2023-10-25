@@ -1,22 +1,24 @@
+import { blanks } from "./strings.js";
+import { innerText } from "./constant.js";
+
+export let doc = document;
+export let body = doc.body;
+export let head = doc.head;
+
 // 자주 쓰이는 함수
-let parse = Number.parseInt;
-let request = requestAnimationFrame;
-let timeout = setTimeout;
-let encode = encodeURIComponent;
-let toChar = String.fromCharCode;
-let getNow = Date.now;
+export let parse = Number.parseInt;
+export let request = requestAnimationFrame;
+export let timeout = setTimeout;
+export let encode = encodeURIComponent;
+export let toChar = String.fromCharCode;
+export let getNow = Date.now;
 
 // 로깅용
-let initTime = getNow();
+export let initTime = getNow();
 
-const decoder = new TextDecoder();
-export const decode = (encoded) => {
-    const binary = atob(encoded.replace(/-/g, '+').replace(/_/g, '/').replace(/\./g, '='));
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < bytes.length; i++) { bytes[i] = binary.charCodeAt(i); }
-    return decoder.decode(bytes);
-};
-export const debug = (...any) => {
+let logDiv;
+
+export let debug = (...any) => {
     let string = '[' + ((getNow() - initTime) / 1000).toFixed(2) + ']';
     console.log(string, ...any);
     if (DEBUG && logDiv) {
@@ -27,21 +29,21 @@ export const debug = (...any) => {
         createElement('p', logDiv, { [innerText]: string });
     }
 }
-export const initPromise = () => {
+export let initPromise = () => {
     let r, p = new Promise(resolve => r = resolve);
     return {r, p};
 };
-export const sleep = (ms) => {
+export let sleep = (ms) => {
     let { r, p } = initPromise();
     timeout(r, ms);
     return p;
 }
-export const randomInt = (start, end) => {
+export let randomInt = (start, end) => {
     let range = end - start + 1;
     let num = Math.random() * range;
     return Math.min(start + Math.floor(num), end);
 };
-export const unescapeEmoji = (string) => {
+export let unescapeEmoji = (string) => {
     // emoji support
     let matches = string.matchAll(/&#x([0-9a-fA-F]+);/g);
     for (let match of matches) {
@@ -51,7 +53,7 @@ export const unescapeEmoji = (string) => {
     return string;
 }
 
-export const trimHtml = (string) => {
+export let trimHtml = (string) => {
     return string
         .r(/(\r|\t)/g, '')
         .r(/[ ]{2,}/g, ' ');
@@ -61,13 +63,13 @@ function buf2hex(buffer) {
         .map(x => x.toString(16).padStart(2, '0'))
         .join('');
 };
-export const splice = (list, item) => {
+export let splice = (list, item) => {
     let index = list.indexOf(item);
     if (index != -1) list.splice(index, 1);
 }
 
-export const encoder = new TextEncoder();
-export const computeHashAsColor = async (string) => {
+export let encoder = new TextEncoder();
+export let computeHashAsColor = async (string) => {
     let buffer = encoder.encode(string);
     let hash = await crypto.subtle.digest('SHA-256', buffer).catch(debug);
     let hex = buf2hex(hash);
@@ -79,9 +81,8 @@ function toBrightColor(hex) {
     let scaled = Math.floor(num * 360 / 16777215);
     return 'hsl(' + scaled + ',80%,60%)';
 };
-/** `         ` */
-export const blanks = decode('4oCA4oCB4oCE4oCF4oCG4oCH4oCI4oCJ4oCK').split('');
-export const randomBlanks = (count) => {
+
+export let randomBlanks = (count) => {
     let output = '';
     for (let i = 0; i < count; i++) {
         output += blanks[randomInt(0, blanks.length - 1)];
@@ -89,10 +90,10 @@ export const randomBlanks = (count) => {
     return output;
 };
 
-export const split = (string) => string.split('||');
+export let split = (string) => string.split('||');
 
 // Document
-export const getCookie = (cookieName) => {
+export let getCookie = (cookieName) => {
     let x, y;
     let val = doc.cookie.split(';');
     for (let i = 0; i < val.length; i++) {
@@ -103,15 +104,29 @@ export const getCookie = (cookieName) => {
     }
     return 'undefined';
 };
-export const cutIpAddress = (address) => {
+export let cutIpAddress = (address) => {
     let array = address.split('.');
     return array[0] + '.' + array[1];
 };
-export const setStyleProp = (element, propertyName, value) => element.style.setProperty(propertyName, value);
-export const setDocStyleProp = (propertyName, value) => setStyleProp(doc.documentElement, propertyName, value);
+export let setStyleProp = (element, propertyName, value) => element.style.setProperty(propertyName, value);
+export let setDocStyleProp = (propertyName, value) => setStyleProp(doc.documentElement, propertyName, value);
+
+export let createElement = (tagName, parent, attr, ...classes) => {
+    let element = doc.createElement(tagName);
+    if (attr) {
+        if (typeof attr == 'object') for (let key in attr) element[key] = attr[key];
+        else if (typeof attr == 'string') classes.push(attr);
+    }
+    for (let className of classes) {
+        element.classList.add(...className.split('.'));
+    }
+    if (parent && parent.appendChild) parent.appendChild(element);
+    return element;
+};
+if (DEBUG) logDiv = createElement('div', body, 'log', 'hidden');
 
 // grecaptcha v3
-export const initCaptchaV3 = async () => {
+export let initCaptchaV3 = async () => {
     let { r, p } = initPromise();
     createElement('script', body, {
         onload: () => {
@@ -124,19 +139,19 @@ export const initCaptchaV3 = async () => {
     });
     return await p;
 }
-export const executeCaptchaV3 = async (action) => {
+export let executeCaptchaV3 = async (action) => {
     if (typeof grecaptcha == 'undefined') await initCaptchaV3();
     let { r, p } = initPromise();
     grecaptcha.ready(() => grecaptcha.execute(grecaptchaBlock, {action: action}).then(r).catch(e => {debug(e); r('');}));
     return await p;
 };
 
-export const executeCaptcha = async (version, data, action) => {
+export let executeCaptcha = async (version, data, action) => {
     if (version == 'v3') return data[grecaptchaToken] = await executeCaptchaV3(action);
     debug('recaptcha', version, 'is not supported');
 };
 
-export const useCaptcha = async (func, params, data, action) => {
+export let useCaptcha = async (func, params, data, action) => {
     let tryMax = 1;
     let tryNum = 0;
     let res;
@@ -158,9 +173,9 @@ export const useCaptcha = async (func, params, data, action) => {
     return await tryPost();
 };
 
-export const bytesKb = 1024;
-export const bytesUnits = 'B.KB.MB.GB.TB.PB'.split('.');
-export const bytes = (size) => {
+export let bytesKb = 1024;
+export let bytesUnits = 'B.KB.MB.GB.TB.PB'.split('.');
+export let bytes = (size) => {
     let unitIndex = 0;
     let unitDevide = 1;
     let unitBytes = bytesKb;
@@ -181,39 +196,27 @@ export const bytes = (size) => {
 };
 
 // UI
-export const createElement = (tagName, parent, attr, ...classes) => {
-    let element = doc.createElement(tagName);
-    if (attr) {
-        if (typeof attr == 'object') for (let key in attr) element[key] = attr[key];
-        else if (typeof attr == 'string') classes.push(attr);
-    }
-    for (let className of classes) {
-        element.classList.add(...className.split('.'));
-    }
-    if (parent && parent.appendChild) parent.appendChild(element);
-    return element;
-}
-export const createIcon = (parent, name, ...classes) => {
+export let createIcon = (parent, name, ...classes) => {
     return createElement(spanString, parent, { [innerText]: name }, 'material-symbols-outlined.icon', ...classes);
 };
-export const clearChildren = (element) => {
+export let clearChildren = (element) => {
     while(element.lastChild) element.removeChild(element.lastChild);
 };
-export const detach = (element) => {
+export let detach = (element) => {
     element.parentNode.removeChild(element);
     return element;
 };
-export const addClass = (element, ...className) => {
+export let addClass = (element, ...className) => {
     element.classList.add(...className);
     return element;
 };
-export const removeClass = (element, ...className) => {
+export let removeClass = (element, ...className) => {
     element.classList.remove(...className);
     return element;
 };
-export const scrollToTop = () => scrollTo(0, 0);
-export const preventEnter = false;
-export const enterAsClick = (input, submit, bShift = false, bForce = false) => {
+export let scrollToTop = () => scrollTo(0, 0);
+export let preventEnter = false;
+export let enterAsClick = (input, submit, bShift = false, bForce = false) => {
     input.onkeypress = (ev) => {
         if (!bForce && preventEnter) return;
         if (ev.key != 'Enter') return;
@@ -227,15 +230,15 @@ export const enterAsClick = (input, submit, bShift = false, bForce = false) => {
 };
 
 // URL 매크로
-export const getBoardUrl = () => host + (bMinor ? 'mgallery/' : (bMini ? 'mini/' : '')) + 'board/';
-export const getBoardUrlPlain = () => host + 'board/';
-export const getListUrl = () => getBoardUrl() + 'lists?id=' + gallId;
-export const getWriteUrl = () => getBoardUrl() + 'write/?id=' + gallId;
-export const getPostUrl = (num) => getBoardUrl() + 'view/?id=' + gallId + '&no=' + num;
-export const getDeleteUrl = (num) => getBoardUrl() + 'delete/?id=' + gallId + '&no=' + num;
+export let getBoardUrl = () => host + (bMinor ? 'mgallery/' : (bMini ? 'mini/' : '')) + 'board/';
+export let getBoardUrlPlain = () => host + 'board/';
+export let getListUrl = () => getBoardUrl() + 'lists?id=' + gallId;
+export let getWriteUrl = () => getBoardUrl() + 'write/?id=' + gallId;
+export let getPostUrl = (num) => getBoardUrl() + 'view/?id=' + gallId + '&no=' + num;
+export let getDeleteUrl = (num) => getBoardUrl() + 'delete/?id=' + gallId + '&no=' + num;
 
 // Fetch
-export const serializeForm = (...datas) => {
+export let serializeForm = (...datas) => {
     let body = '';
     for (let data of datas) {
         for (let key in data) {
@@ -246,7 +249,7 @@ export const serializeForm = (...datas) => {
     }
     return body.substring(1);
 }
-export const serializeMultipart = (data, file) => {
+export let serializeMultipart = (data, file) => {
     let form = createElement('form', null, { entype: "multipart/formdata" });
     let multipart = new FormData(form);
     for (let key in data) { multipart.append(key, data[key]); }
@@ -257,7 +260,7 @@ export const serializeMultipart = (data, file) => {
 // secret
 export let _secret;
 // from common.js?v=220811 line 841
-export const _d = (r) => {
+export let _d = (r) => {
     let a, e, n, t, f, d, h,
     i = 'yL/M=zNa0bcPQdReSfTgUhViWjXkYIZmnpo+qArOBslCt2D3uE4Fv5G6wH178xJ9K',
     o = '', c = 0;
@@ -275,17 +278,17 @@ export const _d = (r) => {
     return o;
 }
 // from common.js?v=220811 line 845
-export const rc1 = (s) => {
+export let rc1 = (s) => {
     let fi = parse(s.substring(0, 1));
     fi = fi > 5 ? fi - 5 : fi + 4;
     return s.r(/^./, fi);
 }
-export const getSecretString = (html) => {
+export let getSecretString = (html) => {
     let r = html.match(/var _r = _d\('([A-Za-z0-9+=\/]+)'\)/);
     if (!r) return '';
     return _d(r[1]);
 }
-export const getSecondServiceCode = (code, secret) => {
+export let getSecondServiceCode = (code, secret) => {
     secret = rc1(secret ?? _secret);
     let _rs = secret.split(',');
     let c = '';
@@ -295,14 +298,7 @@ export const getSecondServiceCode = (code, secret) => {
 }
 
 // worker support
-export const genUtil = () => {
-    let _debug;
-    try {
-        _debug = debug;
-    } catch {
-        _debug = console.log;
-    }
-
+export let genUtil = () => {
     let savedRegexHtml = {};
     let getHtml = (text, tagName, className) => {
         let matches = getHtmlAll(text, tagName, className);
@@ -407,11 +403,10 @@ export const genUtil = () => {
         _AT: getAttributeTo,
         _A: getAttribute,
         _TF: testFix,
-        _DEBUG: _debug,
         _IO: innerTextOf,
     };
 };
-export const {
+export let {
     _IH: getInnerHtml,
     _OH: getOuterHtml,
     _OHA: getOuterHtmlAll,
@@ -419,11 +414,106 @@ export const {
     _AT: getAttributeTo,
     _A: getAttribute,
     _TF: testFix,
-    _DEBUG: _debug,
     _IO: innerTextOf,
 } = genUtil(debug);
-export const savedRegexId = {};
-export const getValueById = (text, id) => {
+
+// export let getHtml = (text, tagName, className) => {
+//     let matches = getHtmlAll(text, tagName, className);
+//     if (!matches) return '';
+//     return matches[0];
+// }
+// export let getHtmlAll = (text, tagName, className) => {
+//     let regex;
+//     let key = tagName + className;
+//     if (savedRegexHtml[key] !== undefined) regex = savedRegexHtml[key];
+//     else {
+//         let regexString = `<${tagName}[^>]*class=["'][^"]*${className}[^"]*["'][^>]*(\/?)>`;
+//         regex = new RegExp(regexString, 'g');
+//         savedRegexHtml[key] = regex;
+//     }
+//     let matches = text.matchAll(regex);
+//     if (!matches) return null;
+//     let result = [];
+//     for (match of matches) {
+//         if (match[1]) {
+//             result.push([match[0], '']);
+//             continue;
+//         }
+//         let index = match.index;
+//         let size = 0;
+//         let sub = text.substring(index);
+//         let level = 0;
+//         let ends = sub.matchAll(new RegExp(`<(\/?)${tagName}[^>]*(\/?)>`, 'g'));
+//         for (let end of ends) {
+//             if (end[1]) { // close
+//                 level -= 1;
+//                 if (level == 0) {
+//                     index = end.index;
+//                     size = end[0].length;
+//                     break;
+//                 }
+//             } else {
+//                 if (!end[2]) level += 1;
+//             }
+//         }
+//         result.push([sub.substring(0, index + size), sub.substring(match[0].length, index)]);
+//     }
+//     return result;
+// };
+// export let getInnerHtml = (text, tagName, className) => {
+//     let match = getHtml(text, tagName, className);
+//     if (!match) return '';
+//     else return match[1];
+// };
+// export let getOuterHtml = (text, tagName, className) => {
+//     let match = getHtml(text, tagName, className);
+//     if (!match) return '';
+//     else return match[0];
+// };
+// export let getOuterHtmlAll = (text, tagName, className) => {
+//     let outers = [];
+//     let matches = getHtmlAll(text, tagName, className);
+//     if (!matches) return '';
+//     for (let match of matches) {
+//         outers.push(match[0]);
+//     }
+//     return outers;
+// };
+// export let getInnerText = (text, tagName, className) => {
+//     let innerHtml = getInnerHtml(text, tagName, className);
+//     if (!innerHtml) return '';
+//     return innerTextOf(innerHtml);
+// };
+// export let innerTextOf = (text) => {
+//     let result = '';
+//     for (let match of text.matchAll(/(>|$)(.*?)(<|^)/g)) {
+//         result += match[2].trim();
+//     }
+//     return result;
+// };
+// export let savedRegexAttr = {};
+// export let getAttributeTo = (text, attrName, output, propName) => {
+//     let attr = getAttribute(text, attrName);
+//     if (attr == null) return;
+//     output[propName] = attr;
+// }
+// export let getAttribute = (text, attrName) => {
+//     let regex;
+//     if (savedRegexAttr[attrName] !== undefined) regex = savedRegexAttr[attrName];
+//     else {
+//         regex = new RegExp(`${attrName}="([^"]+)"`);
+//         savedRegexAttr[attrName] = regex;
+//     }
+//     let match = text.match(regex);
+//     if (!match) return null;
+//     return match[1];
+// }
+
+// // 기타 매크로
+// export let testFix = (string) => /fix/.test(string);
+
+export let savedRegexId = {};
+export let getValueById = (text, id) => {
     let regex;
     if (savedRegexId[id]) regex = savedRegexId[id];
     else {
@@ -435,10 +525,14 @@ export const getValueById = (text, id) => {
     return match[2];
 };
 
-export const getFormData = (text, id, data) => {
+export let getFormData = (text, id, data) => {
     let regex = new RegExp(`<form[^>]+id=["']${id}["'][^>]*>.*?<\/form>`);
     let match = text.match(regex);
     if (!match) return false;
     updateFormDataV3(match[0], data);
     return true;
+};
+
+export let getVarName = (obj) => {
+    return Object.keys(obj)[0];
 };
