@@ -1,7 +1,6 @@
 import { str_survey, str_notice } from './strings.js';
 import { getAsText } from "./fetch.js";
-import { debug, getValueById, genUtil } from "./common.js";
-import { host } from "./constant.js";
+import { debug, getValueById, genUtil, getListUrl } from "./common.js";
 
 export let initGall = async (gallId, interval) => {
     let gall = {
@@ -14,7 +13,7 @@ export let initGall = async (gallId, interval) => {
         last: 0,
     };
 
-    let listUrl = host + 'board/lists?id=' + gallId;
+    let listUrl = getListUrl('G', gallId);
     let html = await getAsText(listUrl);
     if (!html) return null;
     let redirect = html.match(/^<script type="text\/javascript">location.replace\(["']([^"']+)["']\);<\/script>/);
@@ -76,7 +75,13 @@ export let initGall = async (gallId, interval) => {
         let text = await getAsText(listUrl);
         if (!text) return;
         try {
-            let _lastNum = _LN ?? gall.last;
+            let _lastNum; 
+            try {
+                _lastNum = _LN;
+            } catch {
+                _lastNum = gall.last;
+            }
+            let _curNum = _lastNum;
             let postDataArray = [];
             for (let match of text.matchAll(/<tr[^>]*class="[^"]*us-post[^"]*"[^>]*data-no="([^"]*)".+?<\/tr>/g)) {
                 let post = match[0];
@@ -109,7 +114,7 @@ export let initGall = async (gallId, interval) => {
                     }
                     continue;
                 }
-                _lastNum = Math.max(_lastNum, num);
+                _curNum = Math.max(_curNum, num);
                 let title = getInnerText(post, 'td', 'gall_tit');
                 if (reply) title = title.slice(0, title.length - reply[1].length - 2);
                 postData.title = unescape(title);
@@ -135,15 +140,37 @@ export let initGall = async (gallId, interval) => {
                 if (date !== null) postData.date = Date.parse(date);
                 postDataArray.push(postData);
             }
-            self.postMessage({type:'pd', d: postDataArray, n: _lastNum});
+            self.postMessage({type:'pd', d: postDataArray, n: _curNum});
         } catch (e) {
             debug(e);
         }
     };
-    let updateCycle = async (update, params) => {
+    let updateCycle = async (cycle, update, params) => {
         await update(params);
-        let _loop = setTimeout(() => updateCycle(update, params), _IV ?? interval);
-        if (loop !== undefined) loop = _loop;
+        let _iv;
+        try {
+            _iv = _IV;
+        } catch {
+            _iv = interval;
+        }
+        let _loop = setTimeout(() => cycle(cycle, update, params), _iv);
+        try {
+            loop = _loop;
+        } catch { }
+    };
+    let handler = async (e) => {
+        let data = e.data;
+        if (data && data.type) {
+            if (data.type == 'pd') {
+                lastNum = data.n;
+                gall.last = lastNum;
+                gall.onpostdata?.(data.d);
+                if (worker) worker.postMessage({ type: 'ln', ['ln']: lastNum });
+                return;
+            }
+            if (data.type == 'cc') return gall.oncomment?.(data.n, data.c, bFirstUpdate);
+            if (data.type == 'err') return initUpdate('worker err');
+        }
     };
     let initUpdate = (...reason) => {
         debug('init update', ...reason);
@@ -155,8 +182,9 @@ export let initGall = async (gallId, interval) => {
                 `let _LN=${ lastNum };`,
                 `let _UC=${ updateCycle.toString() };`,
                 `let _GP=${ genParams.toString() };`,
+                `let loop=null;`,
                 `self.onmessage=async(e)=>{switch(e.data.type){case'iv':_IV=e.data.iv;break;case'ln':_LN=e.data.ln;break;}};`,
-                `_UC(_GP(${genUtil.toString()},console.error,${getAsText.toString()},${listUrl},{},'${str_survey}','${str_notice}'));`
+                `_UC(_UC,${updateList.toString()},_GP(${genUtil.toString()},console.error,${getAsText.toString()},'${listUrl}',{},'${str_survey}','${str_notice}'));`
             ], { type: 'text/javascript' });
             let url = URL.createObjectURL(blob);
             worker = new Worker(url);
@@ -164,31 +192,19 @@ export let initGall = async (gallId, interval) => {
                 debug(...any);
                 initUpdate('error', ...any);
             };
-            worker.onmessage = async (e) => {
-                let data = e.data;
-                if (data && data.type) {
-                    if (data.type == 'pd') {
-                        lastNum = data.n;
-                        gall.last = lastNum;
-                        gall.onpostdata?.(data.d);
-                        if (worker) worker.postMessage({ type: 'ln', ln: lastNum });
-                        return;
-                    }
-                    if (data.type == 'cc') return gall.oncomment?.(data.n, data.c, bFirstUpdate);
-                    if (data.type == 'err') return initUpdate('worker err');
-                }
-            };
+            worker.onmessage = handler;
         } else {
             if (loop) clearTimeout(loop);
-            loop = updateCycle(updateList, debug, {}, genUtil());
+            updateCycle(updateCycle, updateList, genParams(genUtil, debug, getAsText, listUrl, {}, str_survey, str_notice));
+            onmessage = handler;
         }
     };
     gall.reset = initUpdate;
     initUpdate();
 
     gall.set = (_interval) => {
+        interval = _interval;
         if (worker) worker.postMessage({ type: 'iv', iv: _interval });
-        else interval = _interval;
     };
     return gall;
 };

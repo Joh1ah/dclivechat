@@ -1,9 +1,13 @@
 import { blanks } from "./strings.js";
-import { innerText } from "./constant.js";
+import { host } from "./constant.js";
 
 export let doc = document;
 export let body = doc.body;
 export let head = doc.head;
+
+export let storage = localStorage ?? null;
+export let bWorkerAvailable = window.Worker && true;
+export let bClipboardReadAvailable = window.navigator.clipboard.read && true;
 
 // 자주 쓰이는 함수
 export let parse = Number.parseInt;
@@ -14,20 +18,11 @@ export let toChar = String.fromCharCode;
 export let getNow = Date.now;
 
 // 로깅용
-export let initTime = getNow();
-
-let logDiv;
+let initTime = getNow();
 
 export let debug = (...any) => {
     let string = '[' + ((getNow() - initTime) / 1000).toFixed(2) + ']';
     console.log(string, ...any);
-    if (DEBUG && logDiv) {
-        for (let item of any) {
-            if (typeof item == 'undefined') string += ' undefined';
-            else string += ' ' + (item.toString?.() ?? '');
-        }
-        createElement('p', logDiv, { [innerText]: string });
-    }
 }
 export let initPromise = () => {
     let r, p = new Promise(resolve => r = resolve);
@@ -58,7 +53,7 @@ export let trimHtml = (string) => {
         .r(/(\r|\t)/g, '')
         .r(/[ ]{2,}/g, ' ');
 };
-function buf2hex(buffer) {
+export let buf2hex = (buffer) => {
     return [...new Uint8Array(buffer)]
         .map(x => x.toString(16).padStart(2, '0'))
         .join('');
@@ -68,7 +63,7 @@ export let splice = (list, item) => {
     if (index != -1) list.splice(index, 1);
 }
 
-export let encoder = new TextEncoder();
+let encoder = new TextEncoder();
 export let computeHashAsColor = async (string) => {
     let buffer = encoder.encode(string);
     let hash = await crypto.subtle.digest('SHA-256', buffer).catch(debug);
@@ -111,68 +106,6 @@ export let cutIpAddress = (address) => {
 export let setStyleProp = (element, propertyName, value) => element.style.setProperty(propertyName, value);
 export let setDocStyleProp = (propertyName, value) => setStyleProp(doc.documentElement, propertyName, value);
 
-export let createElement = (tagName, parent, attr, ...classes) => {
-    let element = doc.createElement(tagName);
-    if (attr) {
-        if (typeof attr == 'object') for (let key in attr) element[key] = attr[key];
-        else if (typeof attr == 'string') classes.push(attr);
-    }
-    for (let className of classes) {
-        element.classList.add(...className.split('.'));
-    }
-    if (parent && parent.appendChild) parent.appendChild(element);
-    return element;
-};
-if (DEBUG) logDiv = createElement('div', body, 'log', 'hidden');
-
-// grecaptcha v3
-export let initCaptchaV3 = async () => {
-    let { r, p } = initPromise();
-    createElement('script', body, {
-        onload: () => {
-            if (typeof grecaptcha == 'undefined') return debug('recaptcha is undefined');
-            else debug('recaptcha v3 loaded');
-            r();
-        },
-        type: 'text/javascript',
-        src: https + 'www.google.com/recaptcha/api.js?render=' + grecaptchaBlock,
-    });
-    return await p;
-}
-export let executeCaptchaV3 = async (action) => {
-    if (typeof grecaptcha == 'undefined') await initCaptchaV3();
-    let { r, p } = initPromise();
-    grecaptcha.ready(() => grecaptcha.execute(grecaptchaBlock, {action: action}).then(r).catch(e => {debug(e); r('');}));
-    return await p;
-};
-
-export let executeCaptcha = async (version, data, action) => {
-    if (version == 'v3') return data[grecaptchaToken] = await executeCaptchaV3(action);
-    debug('recaptcha', version, 'is not supported');
-};
-
-export let useCaptcha = async (func, params, data, action) => {
-    let tryMax = 1;
-    let tryNum = 0;
-    let res;
-    let tryPost = async () => {
-        if (tryNum > tryMax) return res;
-        tryNum += 1;
-        res = await func(...params, data);
-        if (!res) return falseString(str_error_badRequest);
-        let splits = split(res);
-        if (splits[0] == 'false') {
-            if (splits.length == 1) return falseString(res);
-            if (splits[1] == 'captcha') {
-                await executeCaptcha(splits[2], data, action);
-                return await tryPost();
-            }
-        }
-        return res;
-    };
-    return await tryPost();
-};
-
 export let bytesKb = 1024;
 export let bytesUnits = 'B.KB.MB.GB.TB.PB'.split('.');
 export let bytes = (size) => {
@@ -195,44 +128,10 @@ export let bytes = (size) => {
     }
 };
 
-// UI
-export let createIcon = (parent, name, ...classes) => {
-    return createElement(spanString, parent, { [innerText]: name }, 'material-symbols-outlined.icon', ...classes);
-};
-export let clearChildren = (element) => {
-    while(element.lastChild) element.removeChild(element.lastChild);
-};
-export let detach = (element) => {
-    element.parentNode.removeChild(element);
-    return element;
-};
-export let addClass = (element, ...className) => {
-    element.classList.add(...className);
-    return element;
-};
-export let removeClass = (element, ...className) => {
-    element.classList.remove(...className);
-    return element;
-};
-export let scrollToTop = () => scrollTo(0, 0);
-export let preventEnter = false;
-export let enterAsClick = (input, submit, bShift = false, bForce = false) => {
-    input.onkeypress = (ev) => {
-        if (!bForce && preventEnter) return;
-        if (ev.key != 'Enter') return;
-        if (DEBUG) debug(ev);
-        if (bMobileDevice && bShift) return;
-        if (!bMobileDevice && bShift && ev.shiftKey) return;
-        ev.preventDefault();
-        submit.click();
-        input.oninput?.();
-    };
-};
-
 // URL 매크로
-export let getBoardUrl = () => host + (bMinor ? 'mgallery/' : (bMini ? 'mini/' : '')) + 'board/';
+export let getBoardUrl = (gallType = 'G') => host + (gallType === 'M' ? 'mgallery/' : (gallType === 'm' ? 'mini/' : '')) + 'board/';
 export let getBoardUrlPlain = () => host + 'board/';
-export let getListUrl = () => getBoardUrl() + 'lists?id=' + gallId;
+export let getListUrl = (gallType, gallId) => getBoardUrl(gallType) + 'lists?id=' + gallId;
 export let getWriteUrl = () => getBoardUrl() + 'write/?id=' + gallId;
 export let getPostUrl = (num) => getBoardUrl() + 'view/?id=' + gallId + '&no=' + num;
 export let getDeleteUrl = (num) => getBoardUrl() + 'delete/?id=' + gallId + '&no=' + num;
@@ -417,102 +316,7 @@ export let {
     _IO: innerTextOf,
 } = genUtil(debug);
 
-// export let getHtml = (text, tagName, className) => {
-//     let matches = getHtmlAll(text, tagName, className);
-//     if (!matches) return '';
-//     return matches[0];
-// }
-// export let getHtmlAll = (text, tagName, className) => {
-//     let regex;
-//     let key = tagName + className;
-//     if (savedRegexHtml[key] !== undefined) regex = savedRegexHtml[key];
-//     else {
-//         let regexString = `<${tagName}[^>]*class=["'][^"]*${className}[^"]*["'][^>]*(\/?)>`;
-//         regex = new RegExp(regexString, 'g');
-//         savedRegexHtml[key] = regex;
-//     }
-//     let matches = text.matchAll(regex);
-//     if (!matches) return null;
-//     let result = [];
-//     for (match of matches) {
-//         if (match[1]) {
-//             result.push([match[0], '']);
-//             continue;
-//         }
-//         let index = match.index;
-//         let size = 0;
-//         let sub = text.substring(index);
-//         let level = 0;
-//         let ends = sub.matchAll(new RegExp(`<(\/?)${tagName}[^>]*(\/?)>`, 'g'));
-//         for (let end of ends) {
-//             if (end[1]) { // close
-//                 level -= 1;
-//                 if (level == 0) {
-//                     index = end.index;
-//                     size = end[0].length;
-//                     break;
-//                 }
-//             } else {
-//                 if (!end[2]) level += 1;
-//             }
-//         }
-//         result.push([sub.substring(0, index + size), sub.substring(match[0].length, index)]);
-//     }
-//     return result;
-// };
-// export let getInnerHtml = (text, tagName, className) => {
-//     let match = getHtml(text, tagName, className);
-//     if (!match) return '';
-//     else return match[1];
-// };
-// export let getOuterHtml = (text, tagName, className) => {
-//     let match = getHtml(text, tagName, className);
-//     if (!match) return '';
-//     else return match[0];
-// };
-// export let getOuterHtmlAll = (text, tagName, className) => {
-//     let outers = [];
-//     let matches = getHtmlAll(text, tagName, className);
-//     if (!matches) return '';
-//     for (let match of matches) {
-//         outers.push(match[0]);
-//     }
-//     return outers;
-// };
-// export let getInnerText = (text, tagName, className) => {
-//     let innerHtml = getInnerHtml(text, tagName, className);
-//     if (!innerHtml) return '';
-//     return innerTextOf(innerHtml);
-// };
-// export let innerTextOf = (text) => {
-//     let result = '';
-//     for (let match of text.matchAll(/(>|$)(.*?)(<|^)/g)) {
-//         result += match[2].trim();
-//     }
-//     return result;
-// };
-// export let savedRegexAttr = {};
-// export let getAttributeTo = (text, attrName, output, propName) => {
-//     let attr = getAttribute(text, attrName);
-//     if (attr == null) return;
-//     output[propName] = attr;
-// }
-// export let getAttribute = (text, attrName) => {
-//     let regex;
-//     if (savedRegexAttr[attrName] !== undefined) regex = savedRegexAttr[attrName];
-//     else {
-//         regex = new RegExp(`${attrName}="([^"]+)"`);
-//         savedRegexAttr[attrName] = regex;
-//     }
-//     let match = text.match(regex);
-//     if (!match) return null;
-//     return match[1];
-// }
-
-// // 기타 매크로
-// export let testFix = (string) => /fix/.test(string);
-
-export let savedRegexId = {};
+let savedRegexId = {};
 export let getValueById = (text, id) => {
     let regex;
     if (savedRegexId[id]) regex = savedRegexId[id];
@@ -536,3 +340,5 @@ export let getFormData = (text, id, data) => {
 export let getVarName = (obj) => {
     return Object.keys(obj)[0];
 };
+
+export let falseString = (s) => 'false||' + s;
